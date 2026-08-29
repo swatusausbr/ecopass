@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#060d1a">
+<title>EcoPass</title>
+<style>
+  :root{
+    --bg:#060d1a; --panel:#0c1830; --card:#12213a; --card2:#182b4a;
+    --line:#1f3355; --green:#4ade80; --green-dark:#16a34a; --green-soft:rgba(74,222,128,.12);
+    --amber:#fbbf24; --blue:#60a5fa; --text:#eef4ff; --muted:#8ba3c7;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html, body{
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body{
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── App shell ── */
+  #app-shell{
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-top: var(--safe-top);
+  }
+
+  /* ── Scrollable content area ── */
+  #app{
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: calc(72px + var(--safe-bottom));
+    background: linear-gradient(180deg, #0a1426 0%, var(--bg) 35%);
+  }
+  #app::-webkit-scrollbar{ display: none; }
+
+  /* ── Views ── */
+  .view{ display:none; padding: 16px 20px 0; animation: fade .25s ease; }
+  .view.active{ display: block; }
+  @keyframes fade{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+
+  /* ── App header ── */
+  .apphead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .brand{ font-size:22px; font-weight:800; letter-spacing:-.3px; }
+  .brand span{ color:var(--green); }
+  .chip{
+    font-size:11px; color:var(--green); background:var(--green-soft);
+    border:1px solid rgba(74,222,128,.3); padding:5px 12px; border-radius:99px; font-weight:600;
+  }
+
+  /* ── Cards ── */
+  .card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:18px; padding:16px; margin-bottom:12px;
+  }
+
+  /* ── Typography ── */
+  .h1{ font-size:24px; font-weight:800; line-height:1.2; margin-bottom:5px; }
+  .h1 em{ color:var(--green); font-style:normal; }
+  .sub{ color:var(--muted); font-size:14px; line-height:1.5; margin-bottom:8px; }
+  .label{
+    font-size:11px; font-weight:700; color:var(--muted);
+    letter-spacing:.6px; text-transform:uppercase; margin:16px 0 8px;
+  }
+
+  /* ── Inputs ── */
+  .input{
+    width:100%; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    border-radius:13px; padding:14px 16px; font-size:16px; outline:none; font-family:inherit;
+    -webkit-appearance:none;
+  }
+  .input:focus{ border-color:var(--green-dark); }
+
+  /* ── Segmented control ── */
+  .seg{
+    display:flex; background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:4px; gap:4px;
+  }
+  .seg button{
+    flex:1; border:0; background:transparent; color:var(--muted);
+    font-weight:700; font-size:15px; padding:12px 0; border-radius:10px;
+    cursor:pointer; transition:.18s; font-family:inherit;
+  }
+  .seg button.on{ background:var(--green); color:#04250f; }
+
+  /* ── Option radio ── */
+  .opt{
+    display:flex; align-items:flex-start; gap:12px; background:var(--panel);
+    border:1.5px solid var(--line); border-radius:14px; padding:14px 16px;
+    margin-bottom:10px; cursor:pointer; font-size:15px; transition:.15s;
+  }
+  .opt.on{ border-color:var(--green-dark); background:var(--green-soft); }
+  .opt .dot{
+    width:20px; height:20px; border-radius:50%; border:2px solid var(--muted);
+    flex-shrink:0; position:relative; margin-top:2px;
+  }
+  .opt.on .dot{ border-color:var(--green); }
+  .opt.on .dot::after{
+    content:""; position:absolute; inset:3px; border-radius:50%; background:var(--green);
+  }
+  .opt small{ display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+
+  /* ── Buttons ── */
+  .btn{
+    width:100%; border:0; border-radius:16px; padding:17px;
+    font-size:16px; font-weight:800; cursor:pointer;
+    background:linear-gradient(135deg,#34d399,#22c55e); color:#04250f;
+    margin-top:16px; transition:.15s; font-family:inherit;
+    -webkit-appearance:none;
+  }
+  .btn:active{ transform:scale(.98); opacity:.9; }
+  .btn.ghost{
+    background:transparent; border:1.5px solid var(--line);
+    color:var(--muted); font-weight:600; margin-top:10px;
+  }
+  .row{ display:flex; gap:10px; }
+  .row>*{ flex:1; }
+
+  /* ── Eco bubble ── */
+  .eco-bubble{ display:flex; gap:12px; align-items:flex-start; margin-bottom:14px; }
+  .eco-avatar{
+    width:42px; height:42px; border-radius:14px; flex-shrink:0;
+    background:linear-gradient(135deg,#14532d,#166534);
+    display:flex; align-items:center; justify-content:center; font-size:21px;
+    border:1.5px solid rgba(74,222,128,.4);
+  }
+  .eco-msg{
+    background:var(--card2); border:1px solid var(--line);
+    border-radius:4px 16px 16px 16px;
+    padding:12px 14px; font-size:14px; line-height:1.5; color:#d7e3f8; flex:1;
+  }
+  .eco-msg b{ color:var(--green); }
+
+  /* ── Steps bar ── */
+  .steps{ display:flex; gap:6px; margin:0 0 18px; }
+  .steps i{ flex:1; height:4px; border-radius:99px; background:var(--line); font-style:normal; transition:.4s; }
+  .steps i.on{ background:var(--green); }
+
+  /* ── Hero card ── */
+  .hero-card{
+    background:linear-gradient(135deg,#0a2918 0%,#0d3320 60%,#0c2c1c 100%);
+    border:1px solid rgba(74,222,128,.2); border-radius:22px; padding:26px 22px; margin-bottom:14px;
+  }
+  .hero-label{ font-size:11px; color:#86efac; letter-spacing:.12em; text-transform:uppercase; font-weight:700; margin-bottom:10px; }
+  .hero-title{ font-size:28px; font-weight:900; line-height:1.1; color:#fff; }
+  .hero-title em{ color:var(--green); font-style:normal; }
+  .hero-sub{ font-size:14px; color:#bbf7d0; margin-top:10px; line-height:1.5; }
+
+  .metric-strip{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .metric-tile{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:14px 8px; text-align:center;
+  }
+  .metric-tile .mv{ font-size:20px; font-weight:800; color:var(--green); }
+  .metric-tile .mk{ font-size:10px; color:var(--muted); margin-top:4px; line-height:1.3; }
+
+  /* ── Loading screen ── */
+  .loading-center{ display:flex; flex-direction:column; align-items:center; padding:40px 0 24px; }
+  .spinner-ring{
+    width:64px; height:64px; border-radius:50%;
+    border:4px solid var(--line); border-top-color:var(--green);
+    animation:spin .9s linear infinite; margin-bottom:20px;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .loading-title{ font-size:18px; font-weight:800; color:#fff; text-align:center; margin-bottom:6px; }
+  .loading-sub{ font-size:14px; color:var(--muted); text-align:center; margin-bottom:24px; }
+  .loading-txt{
+    font-size:14px; color:var(--muted); text-align:center;
+    line-height:1.6; transition:.3s; min-height:46px; padding:0 20px;
+  }
+  .checklist{ display:flex; flex-direction:column; width:100%; }
+  .cl-item{
+    display:flex; align-items:center; gap:14px; padding:14px 18px;
+    border-bottom:1px solid var(--line); font-size:14px; color:var(--muted); transition:.4s;
+  }
+  .cl-item:last-child{ border-bottom:0; }
+  .cl-item.done{ color:#d7e3f8; }
+  .cl-icon{
+    width:24px; height:24px; border-radius:8px; background:var(--panel); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+    flex-shrink:0; transition:.4s; color:var(--muted); font-weight:700;
+  }
+  .cl-item.done .cl-icon{ background:var(--green-soft); border-color:rgba(74,222,128,.4); color:var(--green); }
+
+  /* ── Match card ── */
+  .driver{ display:flex; gap:14px; align-items:center; }
+  .driver-ph{
+    width:56px; height:56px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:800; color:#04250f;
+    background:linear-gradient(135deg,#86efac,#34d399);
+  }
+  .driver h3{ font-size:17px; font-weight:800; }
+  .driver .meta{ color:var(--muted); font-size:13px; margin-top:3px; }
+  .badges{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+  .badge{
+    font-size:11px; font-weight:700; padding:5px 10px; border-radius:99px;
+    background:var(--panel); border:1px solid var(--line); color:#b9c9e4;
+  }
+  .badge.g{ color:var(--green); border-color:rgba(74,222,128,.35); background:var(--green-soft); }
+  .badge.a{ color:var(--amber); border-color:rgba(251,191,36,.35); background:rgba(251,191,36,.08); }
+  .badge.b{ color:var(--blue); border-color:rgba(96,165,250,.35); background:rgba(96,165,250,.08); }
+
+  .routeline{ display:flex; align-items:center; gap:8px; margin:16px 0 5px; }
+  .routeline .rdot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+  .routeline .rdot.g{ background:var(--green); }
+  .routeline .l{ flex:1; height:2px; background:repeating-linear-gradient(90deg,var(--line) 0 6px,transparent 6px 12px); }
+  .routeline .stadium{ font-size:18px; }
+  .routemeta{ display:flex; justify-content:space-between; color:var(--muted); font-size:12px; }
+
+  /* ── Stats ── */
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:12px; }
+  .stat{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px 10px; text-align:center; }
+  .stat .v{ font-size:19px; font-weight:800; color:var(--green); line-height:1; }
+  .stat .v.a{ color:var(--amber); }
+  .stat .v.b{ color:var(--blue); }
+  .stat .k{ font-size:10px; color:var(--muted); margin-top:5px; line-height:1.3; }
+
+  /* ── QR ── */
+  .qr{
+    width:120px; height:120px; margin:10px auto;
+    border-radius:14px;
+    background:conic-gradient(#fff 25%,#0b1220 0 50%,#fff 0 75%,#0b1220 0);
+    background-size:24px 24px; border:8px solid #fff;
+    image-rendering:pixelated; position:relative;
+  }
+  .qr::after{
+    content:"✓"; position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; font-size:36px; color:var(--green-dark);
+    background:rgba(255,255,255,.88); border-radius:4px; margin:30px;
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar{ height:10px; background:var(--panel); border-radius:99px; overflow:hidden; margin-top:8px; }
+  .progress-bar i{ display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#34d399,#22c55e); transition:1s; }
+
+  /* ── List items ── */
+  .list-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:13px 0; border-bottom:1px solid var(--line); font-size:14px;
+  }
+  .list-item:last-child{ border-bottom:0; }
+  .list-item .ico{ margin-right:10px; }
+  .list-item b{ color:var(--green); font-weight:800; }
+
+  /* ── Parking ── */
+  .park-card{
+    display:flex; align-items:center; gap:14px; background:var(--panel);
+    border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:10px;
+  }
+  .park-icon{ font-size:24px; flex-shrink:0; }
+  .park-info{ flex:1; }
+  .park-info strong{ font-size:15px; color:var(--text); display:block; }
+  .park-info span{ font-size:12px; color:var(--muted); }
+  .park-badge{
+    font-size:12px; font-weight:700; color:var(--green);
+    background:var(--green-soft); border:1px solid rgba(74,222,128,.3);
+    border-radius:99px; padding:5px 12px; flex-shrink:0;
+  }
+
+  /* ── Toast ── */
+  .toast{
+    position:fixed; left:50%; bottom:calc(80px + var(--safe-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:#052e16; border:1px solid var(--green-dark); color:#bbf7d0;
+    font-size:14px; font-weight:600; padding:12px 20px; border-radius:99px;
+    opacity:0; pointer-events:none; transition:.3s; white-space:nowrap; z-index:200;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ── Tab bar ── */
+  .tabbar{
+    flex-shrink:0;
+    height: calc(64px + var(--safe-bottom));
+    background:rgba(6,13,26,.96);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-top:1px solid var(--line);
+    display:flex;
+    padding-bottom: var(--safe-bottom);
+  }
+  .tab{
+    flex:1; border:0; background:transparent; color:var(--muted);
+    cursor:pointer; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:3px; font-size:11px; font-weight:600;
+    font-family:inherit; padding:10px 0 6px;
+  }
+  .tab .ti{ font-size:23px; line-height:1; }
+  .tab.on{ color:var(--green); }
+</style>
+</head>
+<body>
+
+<div id="app-shell">
+  <div id="app">
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 0 · INÍCIO         -->
+    <!-- ════════════════════════ -->
+    <section class="view active" id="v-home">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip">🎟️ Ingresso ativado</span>
+      </div>
+
+      <div class="hero-card">
+        <div class="hero-label">FIAP SpeedThon IBM · Sustentabilidade</div>
+        <div class="hero-title">O problema<br>não é chegar.<br><em>É como chegamos.</em></div>
+        <div class="hero-sub">Você já tem o ingresso. Deixa a IA cuidar do melhor trajeto.</div>
+      </div>
+
+      <div class="eco-bubble">
+        <div class="eco-avatar">🌱</div>
+        <div class="eco-msg">Oi! Sou o <b>EcoPass</b>, seu assistente de mobilidade sustentável. Jogo de sábado, 16h, na Neo Química Arena. Vou te conectar ao trajeto mais inteligente — e você ainda ganha benefícios dentro do estádio.</div>
+      </div>
+
+      <div class="metric-strip">
+        <div class="metric-tile"><div class="mv">60%</div><div class="mk">das emissões vêm do deslocamento</div></div>
+        <div class="metric-tile"><div class="mv">50k+</div><div class="mk">torcedores por jogo</div></div>
+        <div class="metric-tile"><div class="mv">2030</div><div class="mk">Meta Net Zero futebol</div></div>
+      </div>
+
+      <div class="card" style="display:flex;gap:16px;align-items:center">
+        <div style="font-size:30px">🎟️</div>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)">Seu ingresso é sua chave</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px">Acesse caronas, ganhe Mobility Credits e use no estádio — tudo em 3 passos.</div>
+        </div>
+      </div>
+
+      <button class="btn" onclick="go('v-cadastro');setTab(-1)">Ativar EcoPass →</button>
+      <button class="btn ghost" onclick="go('v-plan');setTab(1)">Já tenho conta</button>
+    </section>
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 1 · CADASTRO       -->
+    <!-- ════════════════════════ -->
+    <section class="view" id="v-cadastro">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip">Criar perfil</span>
+      </div>
+      <div class="steps"><i class="on"></i><i></i><i></i></div>
+
+      <div class="h1">Seu perfil</div>
+      <div class="sub">Passo 1 de 3 · preferências de mobilidade</div>
+
+      <div class="label">Você vai como?</div>
+      <div class="seg" id="segCadPapel">
+        <button class="on" onclick="setCadPapel('passageiro',this)">🙋 Passageiro</button>
+        <button onclick="setCadPapel('motorista',this)">🚗 Motorista</button>
+      </div>
+
+      <div class="label">Gênero</div>
+      <div class="seg" id="segGenero">
+        <button onclick="setSeg(this,'segGenero')">Masculino</button>
+        <button class="on" onclick="setSeg(this,'segGenero')">Feminino</button>
+        <button onclick="setSeg(this,'segGenero')">Outro</button>
+      </div>
+
+      <div class="label">Seu bairro / região</div>
+      <input class="input" value="Vila Mariana, São Paulo" />
+
+      <div class="label">Preferência de carona · segurança</div>
+      <div class="opt on" id="cadOptQ" onclick="setCadPref('qualquer')">
+        <span class="dot"></span>
+        <span>Qualquer pessoa verificada<small>Identidade + ingresso nominal + avaliações</small></span>
+      </div>
+      <div class="opt" id="cadOptG" onclick="setCadPref('genero')">
+        <span class="dot"></span>
+        <span>Apenas pessoas do mesmo gênero<small>Filtro estrito — nunca relaxado pela IA</small></span>
+      </div>
+
+      <div class="label">Sentido da viagem</div>
+      <div class="seg" id="segSentidoCad">
+        <button onclick="setSeg(this,'segSentidoCad')">Só ida</button>
+        <button onclick="setSeg(this,'segSentidoCad')">Só volta</button>
+        <button class="on" onclick="setSeg(this,'segSentidoCad')">Ida e volta</button>
+      </div>
+
+      <div id="boxVagas">
+        <div class="label">Vagas no veículo</div>
+        <div class="seg" id="segVagas">
+          <button onclick="setSeg(this,'segVagas')">1</button>
+          <button onclick="setSeg(this,'segVagas')">2</button>
+          <button class="on" onclick="setSeg(this,'segVagas')">3</button>
+          <button onclick="setSeg(this,'segVagas')">4</button>
+        </div>
+      </div>
+
+      <button class="btn" onclick="go('v-plan');setTab(1)">Salvar e planejar →</button>
+    </section>
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 2 · PLANEJE        -->
+    <!-- ════════════════════════ -->
+    <section class="view" id="v-plan">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip">🎟️ Ingresso ativado</span>
+      </div>
+      <div class="steps"><i class="on"></i><i></i><i></i></div>
+
+      <div class="eco-bubble">
+        <div class="eco-avatar">🌱</div>
+        <div class="eco-msg">Oi, eu sou o <b>EcoPass</b>! Jogo de sábado, 16h, na Neo Química Arena. De onde você vai sair e como quer chegar de um jeito <b>mais sustentável</b>?</div>
+      </div>
+
+      <div class="h1">Planeje <em>sua ida</em></div>
+      <div class="sub">Passo 1 · informe sua origem e seu papel</div>
+
+      <div class="label">Sua origem</div>
+      <input class="input" id="origem" value="Vila Mariana, São Paulo" />
+
+      <div class="label">Destino</div>
+      <input class="input" value="Neo Química Arena — Itaquera" style="color:var(--muted)" readonly />
+
+      <div class="label">Como você vai?</div>
+      <div class="seg" id="segPapel">
+        <button class="on" onclick="setPapel('passageiro',this)">🙋 Passageiro</button>
+        <button onclick="setPapel('motorista',this)">🚗 Motorista</button>
+      </div>
+
+      <div id="boxPassageiro">
+        <div class="label">Preferência de carona · segurança</div>
+        <div class="opt on" id="optQ" onclick="setPref('qualquer')">
+          <span class="dot"></span>
+          <span>Qualquer pessoa verificada<small>Identidade + ingresso nominal + avaliações</small></span>
+        </div>
+        <div class="opt" id="optG" onclick="setPref('genero')">
+          <span class="dot"></span>
+          <span>Apenas pessoas do mesmo gênero<small>Filtro estrito — nunca relaxado pela IA</small></span>
+        </div>
+      </div>
+
+      <div id="boxMotorista" style="display:none">
+        <div class="label">Configurações do motorista</div>
+        <div class="row">
+          <div class="card" style="margin:0;text-align:center;padding:14px">
+            <div style="font-size:11px;color:var(--muted)">VAGAS</div>
+            <div style="font-size:26px;font-weight:800;color:var(--green)">3</div>
+          </div>
+          <div class="card" style="margin:0;text-align:center;padding:14px">
+            <div style="font-size:11px;color:var(--muted)">DESVIO MÁX.</div>
+            <div style="font-size:22px;font-weight:800;color:var(--green)">10 min</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="label">Sentido</div>
+      <div class="seg" id="segSentido">
+        <button onclick="setSeg(this,'segSentido')">Só ida</button>
+        <button class="on" onclick="setSeg(this,'segSentido')">Ida e volta</button>
+      </div>
+
+      <button class="btn" onclick="buscar()">Buscar com a IA →</button>
+    </section>
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 3 · IA BUSCANDO   -->
+    <!-- ════════════════════════ -->
+    <section class="view" id="v-loading">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip">IA de matching</span>
+      </div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+
+      <div class="loading-center">
+        <div class="spinner-ring"></div>
+        <div class="loading-title">A IA está trabalhando</div>
+        <div class="loading-sub">Calculando trajetórias em comum…</div>
+        <div class="loading-txt" id="loadingTxt">Analisando origens, horários e rotas…</div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="checklist" id="checklist">
+          <div class="cl-item" id="cl0"><div class="cl-icon">1</div><span>Analisando torcedores com ingresso para o jogo</span></div>
+          <div class="cl-item" id="cl1"><div class="cl-icon">2</div><span>Aplicando filtro de segurança e gênero</span></div>
+          <div class="cl-item" id="cl2"><div class="cl-icon">3</div><span>Calculando trajetórias em comum</span></div>
+          <div class="cl-item" id="cl3"><div class="cl-icon">4</div><span>Otimizando ponto de encontro</span></div>
+          <div class="cl-item" id="cl4"><div class="cl-icon">5</div><span>Verificando perfis dos candidatos</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 4 · MATCH          -->
+    <!-- ════════════════════════ -->
+    <section class="view" id="v-match">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip" id="matchChip">2 torcedores no caminho</span>
+      </div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+
+      <div class="h1">A IA conectou <em>seu match</em></div>
+      <div class="sub" style="margin-bottom:14px">Rota em comum · desvio mínimo para todos</div>
+
+      <div class="card">
+        <div class="driver">
+          <div class="driver-ph" id="mAvatar">M</div>
+          <div>
+            <h3 id="mNome">Mariana S.</h3>
+            <div class="meta">⭐ 4,9 · 27 caronas · Honda Fit prata</div>
+          </div>
+        </div>
+        <div class="badges" id="mBadges">
+          <span class="badge g">✓ Identidade verificada</span>
+          <span class="badge g">🎟️ Mesmo jogo</span>
+          <span class="badge a">+4 min desvio</span>
+        </div>
+        <div class="routeline" style="margin-top:16px">
+          <span class="rdot g"></span>
+          <span class="l"></span>
+          <span class="rdot" style="width:11px;height:11px;border-radius:50%;background:var(--amber);flex-shrink:0"></span>
+          <span class="l"></span>
+          <span class="stadium">🏟️</span>
+        </div>
+        <div class="routemeta">
+          <span>Vila Mariana</span>
+          <span>Metrô Ana Rosa · 15:05</span>
+          <span>Chegada 15:38</span>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;gap:12px;align-items:center">
+        <div style="font-size:24px">👥</div>
+        <div style="font-size:14px;line-height:1.45;color:#d7e3f8">
+          <b id="grupoLabel">Você + Carla</b> dividem esta carona.<br>
+          <span style="color:var(--muted)">Volta pré-combinada · zona de embarque B</span>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="v">+4 min</div><div class="k">desvio total</div></div>
+        <div class="stat"><div class="v">3,2 kg</div><div class="k">CO₂ evitado</div></div>
+        <div class="stat"><div class="v a">R$ 12</div><div class="k">Mobility Credits</div></div>
+      </div>
+
+      <button class="btn" onclick="confirmar()">Aceitar carona ✓</button>
+      <button class="btn ghost" onclick="go('v-plan')">Ajustar preferências</button>
+    </section>
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 5 · CONFIRMADA     -->
+    <!-- ════════════════════════ -->
+    <section class="view" id="v-done">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip">Carona confirmada ✓</span>
+      </div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+
+      <div class="h1">Compartilhe <em>e ganhe</em></div>
+      <div class="sub">Passo 3 · check-in no embarque valida sua viagem</div>
+
+      <div class="card" style="text-align:center">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:6px">CHECK-IN DA CARONA</div>
+        <div class="qr"></div>
+        <div style="font-size:13px;color:var(--muted);margin-top:4px">Metrô Ana Rosa · sáb 15:05 · Honda Fit prata</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="v">3,2 kg</div><div class="k">CO₂ evitado<br>nesta viagem</div></div>
+        <div class="stat"><div class="v a">R$ 12</div><div class="k">Mobility Credits<br>no estádio</div></div>
+        <div class="stat"><div class="v b">-30%</div><div class="k">Estacionamento<br>parceiro (mot.)</div></div>
+      </div>
+
+      <div class="card">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:10px">ONDE USAR SEUS CRÉDITOS</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge g">🍔 Alimentação</span>
+          <span class="badge g">🍺 Bebidas</span>
+          <span class="badge g">👕 Loja oficial</span>
+        </div>
+      </div>
+
+      <div class="card" style="background:#0a1e0e;border-color:rgba(74,222,128,.2)">
+        <div style="font-size:14px;line-height:1.5;color:#d7e3f8">
+          🛡️ <b>Sua segurança:</b> trajeto compartilhado com contato de confiança · botão de emergência ativo · <b style="color:var(--green)">volta garantida</b> — plano B com créditos em dobro.
+        </div>
+      </div>
+
+      <button class="btn" onclick="go('v-parking')">Ver estacionamentos parceiros 🅿️</button>
+      <button class="btn ghost" onclick="go('v-impact');setTab(2)">Ver impacto do evento 🌱</button>
+    </section>
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 6 · ESTACIONAMENTO -->
+    <!-- ════════════════════════ -->
+    <section class="view" id="v-parking">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip">Parceiros EcoPass</span>
+      </div>
+
+      <div class="h1">Estacione <em>com desconto</em></div>
+      <div class="sub">Você fez a carona — agora tem prioridade nos parceiros.</div>
+
+      <div class="eco-bubble" style="margin-top:10px">
+        <div class="eco-avatar">🌱</div>
+        <div class="eco-msg">Por trazer <b>2 passageiros</b>, você ganhou desconto preferencial em <b>3 estacionamentos parceiros</b> próximos à arena.</div>
+      </div>
+
+      <div class="park-card">
+        <div class="park-icon">🅿️</div>
+        <div class="park-info">
+          <strong>Park Arena Norte</strong>
+          <span>350m da entrada principal · 120 vagas disponíveis</span>
+        </div>
+        <span class="park-badge">-30%</span>
+      </div>
+      <div class="park-card">
+        <div class="park-icon">🅿️</div>
+        <div class="park-info">
+          <strong>Estacionamento Itaquera</strong>
+          <span>580m · coberto · pré-reserva disponível</span>
+        </div>
+        <span class="park-badge">-25%</span>
+      </div>
+      <div class="park-card">
+        <div class="park-icon">🅿️</div>
+        <div class="park-info">
+          <strong>Top Park Corinthians</strong>
+          <span>720m · segurança 24h</span>
+        </div>
+        <span class="park-badge">-20%</span>
+      </div>
+
+      <div class="card" style="margin-top:4px">
+        <div style="font-size:13px;color:var(--muted)">Desconto aplicado automaticamente via <b style="color:var(--green)">Mobility Credits</b> na saída do evento.</div>
+      </div>
+
+      <button class="btn" onclick="go('v-impact');setTab(2)">Ver impacto do evento 🌱</button>
+    </section>
+
+    <!-- ════════════════════════ -->
+    <!-- VIEW 7 · IMPACT TRACKER -->
+    <!-- ════════════════════════ -->
+    <section class="view" id="v-impact">
+      <div class="apphead">
+        <div class="brand">Eco<span>Pass</span></div>
+        <span class="chip">Neo Química Arena</span>
+      </div>
+
+      <div class="h1">Impact Tracker <em>do jogo</em></div>
+      <div class="sub">Corinthians × Flamengo · 52.000 ingressos</div>
+
+      <div class="stats" style="margin-top:12px">
+        <div class="stat"><div class="v" id="iCars">1.284</div><div class="k">carros retirados<br>da via</div></div>
+        <div class="stat"><div class="v" id="iCo2">3,8 t</div><div class="k">CO₂ evitado<br>hoje</div></div>
+        <div class="stat"><div class="v a" id="iCred">R$ 67k</div><div class="k">credits<br>no estádio</div></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700">
+          <span>🎯 Rumo ao Net Zero 2030</span><span style="color:var(--green)">38%</span>
+        </div>
+        <div class="progress-bar"><i id="progressFill" style="width:38%"></i></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">
+          Meta: reduzir 50% das emissões por jogo até 2030. O deslocamento responde por 60%+ das emissões de um dia de jogo. Com 100% de adoção, o EcoPass chega a <b style="color:var(--green)">9,2 t evitadas por jogo</b>.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label" style="margin-top:0">Suas conquistas hoje</div>
+        <div class="list-item"><span><span class="ico">🚗</span>Carona compartilhada</span><b>+ R$ 12</b></div>
+        <div class="list-item"><span><span class="ico">🚇</span>Metrô (jogo anterior)</span><b>+ R$ 6</b></div>
+        <div class="list-item"><span><span class="ico">♻️</span>Badge: Torcida Consciente</span><b>×3</b></div>
+        <div class="list-item"><span><span class="ico">💰</span>Saldo total de Mobility Credits</span><b>R$ 18</b></div>
+      </div>
+
+      <div class="card" style="display:flex;gap:12px;align-items:flex-start">
+        <div class="eco-avatar" style="width:36px;height:36px;font-size:17px;flex-shrink:0">🌱</div>
+        <div style="font-size:13px;line-height:1.5;color:#d7e3f8">
+          <b>EcoPass sugere:</b> saindo até 2h após o jogo pela zona de embarque B, você evita o pico e ainda ganha <b style="color:var(--green)">15% off</b> no consumo do estádio.
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:4px">
+        <button class="btn" style="margin-top:0;font-size:14px">Exportar ESG 📊</button>
+        <button class="btn ghost" style="margin-top:0;font-size:14px">Compartilhar 🔗</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast">✓ Carona confirmada!</div>
+  </div><!-- /app -->
+
+  <!-- ── Tab bar ── -->
+  <nav class="tabbar">
+    <button class="tab on" id="tab0" onclick="setTab(0);go('v-home')"><span class="ti">🏠</span>Início</button>
+    <button class="tab" id="tab1" onclick="setTab(1);goCarona()"><span class="ti">🚗</span>Carona</button>
+    <button class="tab" id="tab2" onclick="setTab(2);go('v-impact')"><span class="ti">🌱</span>Impacto</button>
+    <button class="tab" id="tab3" onclick="setTab(3);toastMsg('Perfil verificado · ⭐ 4,8')"><span class="ti">👤</span>Perfil</button>
+  </nav>
+</div><!-- /app-shell -->
+
+<script>
+  const state = { papel:'passageiro', pref:'qualquer', confirmado:false };
+  const allViews = ['v-home','v-cadastro','v-plan','v-loading','v-match','v-done','v-parking','v-impact'];
+
+  function go(id){
+    allViews.forEach(v => document.getElementById(v).classList.toggle('active', v===id));
+    document.getElementById('app').scrollTop = 0;
+  }
+  function goCarona(){ go(state.confirmado ? 'v-done' : 'v-plan'); }
+  function setTab(n){
+    [0,1,2,3].forEach(i => document.getElementById('tab'+i).classList.toggle('on', i===n));
+  }
+
+  function setSeg(el, groupId){
+    document.getElementById(groupId).querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+    el.classList.add('on');
+  }
+
+  function setCadPapel(p, el){
+    document.getElementById('segCadPapel').querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('boxVagas').style.display = p==='motorista' ? '' : 'none';
+  }
+  function setCadPref(p){
+    document.getElementById('cadOptQ').classList.toggle('on', p==='qualquer');
+    document.getElementById('cadOptG').classList.toggle('on', p==='genero');
+  }
+
+  function setPapel(p, el){
+    state.papel = p;
+    document.querySelectorAll('#segPapel button').forEach(b=>b.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('boxPassageiro').style.display = p==='passageiro' ? '' : 'none';
+    document.getElementById('boxMotorista').style.display  = p==='motorista'  ? '' : 'none';
+  }
+  function setPref(p){
+    state.pref = p;
+    document.getElementById('optQ').classList.toggle('on', p==='qualquer');
+    document.getElementById('optG').classList.toggle('on', p==='genero');
+  }
+
+  const frasesIA = [
+    'Analisando origens, horários e rotas…',
+    'Cruzando 2.847 torcedores com ingresso para o jogo…',
+    'Aplicando suas preferências de segurança…',
+    'Calculando trajetórias em comum · desvio mínimo…',
+    'Otimizando pontos de encontro nos caminhos…',
+    'Verificando perfis e histórico de avaliações…',
+    'Match encontrado! Preparando resultado…'
+  ];
+  const checkTimes = [300, 700, 1200, 1800, 2400];
+
+  function buscar(){
+    go('v-loading'); setTab(1);
+    for(let i=0;i<5;i++){
+      const item = document.getElementById('cl'+i);
+      item.classList.remove('done');
+      item.querySelector('.cl-icon').innerHTML = (i+1);
+    }
+    let fi = 0;
+    const txtEl = document.getElementById('loadingTxt');
+    txtEl.textContent = frasesIA[0];
+    const txtIt = setInterval(()=>{ fi++; if(fi<frasesIA.length) txtEl.textContent = frasesIA[fi]; }, 420);
+    checkTimes.forEach((t,i)=>{
+      setTimeout(()=>{
+        const item = document.getElementById('cl'+i);
+        item.classList.add('done');
+        item.querySelector('.cl-icon').innerHTML = '✓';
+      }, t);
+    });
+    setTimeout(()=>{ clearInterval(txtIt); montarMatch(); go('v-match'); }, 3200);
+  }
+
+  function montarMatch(){
+    const badges = document.getElementById('mBadges');
+    const base = '<span class="badge g">✓ Identidade verificada</span><span class="badge g">🎟️ Mesmo jogo</span><span class="badge a">+4 min desvio</span>';
+    if(state.papel==='passageiro' && state.pref==='genero'){
+      document.getElementById('mNome').textContent = 'Mariana S.';
+      document.getElementById('mAvatar').textContent = 'M';
+      document.getElementById('grupoLabel').textContent = 'Você + Carla';
+      document.getElementById('matchChip').textContent = '2 torcedoras no caminho';
+      badges.innerHTML = base + '<span class="badge g">🛡️ Filtro: mesmo gênero</span>';
+    } else if(state.papel==='motorista'){
+      document.getElementById('mNome').textContent = 'Passageiros: Carla + João';
+      document.getElementById('mAvatar').textContent = '2';
+      document.getElementById('grupoLabel').textContent = 'Você + Carla + João';
+      document.getElementById('matchChip').textContent = '2 passageiros no caminho';
+      badges.innerHTML = base + '<span class="badge b">🅿️ Estac. parceiro -30%</span>';
+    } else {
+      document.getElementById('mNome').textContent = 'Ricardo A.';
+      document.getElementById('mAvatar').textContent = 'R';
+      document.getElementById('grupoLabel').textContent = 'Você + Carla';
+      document.getElementById('matchChip').textContent = '2 torcedores no caminho';
+      badges.innerHTML = base;
+    }
+  }
+
+  function confirmar(){
+    state.confirmado = true;
+    go('v-done');
+    toastMsg('✓ Carona confirmada! Credits a caminho.');
+    setTimeout(()=>{
+      document.getElementById('iCars').textContent = '1.285';
+      document.getElementById('progressFill').style.width = '39%';
+    }, 900);
+  }
+
+  let tTimer;
+  function toastMsg(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(tTimer);
+    tTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+  }
+</script>
+</body>
+</html>
