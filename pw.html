@@ -206,7 +206,7 @@
     @media (max-width: 950px) {
       .mobile-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; position: sticky; top: 0; z-index: 8; background: #080d23f5; padding: 9px max(12px, env(safe-area-inset-right)) 9px max(12px, env(safe-area-inset-left)); border-bottom: 1px solid var(--border); margin-bottom: 14px; }
       .mobile-nav a { display: flex; align-items: center; justify-content: center; min-height: 44px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 9px; text-decoration: none; font-size: 12px; font-weight: 700; }
-      .mobile-nav a[href="#simulator-form"] { background: var(--blue); border-color: var(--blue); color: white; }
+      .mobile-nav a[aria-current="location"] { background: var(--blue); border-color: var(--blue); color: white; }
       .layout { display: flex; flex-direction: column; padding: 0 max(12px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); gap: 20px; }
       .sidebar, .results { width: 100%; gap: 16px; }
       .results { order: -1; }
@@ -1008,6 +1008,20 @@
     } catch { savedScenarios = []; }
     applyData(currentData);
     update(false);
+    const mobileLinks = Array.from(document.querySelectorAll('.mobile-nav a'));
+    function selectMobileLink(hash) {
+      const selected = mobileLinks.find(link => link.getAttribute('href') === hash)
+        || mobileLinks.find(link => link.getAttribute('href') === '#results');
+      for (const link of mobileLinks) {
+        if (link === selected) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      }
+    }
+    for (const link of mobileLinks) {
+      link.addEventListener('click', () => selectMobileLink(link.getAttribute('href')));
+    }
+    window.addEventListener('hashchange', () => selectMobileLink(window.location.hash));
+    selectMobileLink('#results');
     if (!storageAvailable) $('save-status').textContent = 'Dados apenas nesta sessão';
     }
 
