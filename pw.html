@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080d23">
+  <title>PW Energy | Simulador de Eletroposto</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #080d23;
+      --panel: #202e42;
+      --input: #0c1b32;
+      --border: #39465a;
+      --text: #e7ebf2;
+      --muted: #9baabd;
+      --lime: #8bd40b;
+      --green: #2dd4a0;
+      --red: #ff7378;
+      --blue: #4189f7;
+    }
+    * { box-sizing: border-box; }
+    body.locked > :not(#access-screen) { display: none !important; }
+    body.locked { min-height: 100vh; }
+    #access-screen { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
+    .access-card { width: 100%; max-width: 390px; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 30px 24px; box-shadow: 0 20px 70px #0005; }
+    .access-brand { color: var(--lime); font-size: 22px; font-weight: 800; letter-spacing: 1px; margin-bottom: 22px; }
+    .access-card h1 { font-size: 22px; margin-bottom: 8px; }
+    .access-card p { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+    .access-card label { display: block; font-size: 14px; margin-bottom: 8px; }
+    .access-card input { width: 100%; min-height: 50px; font-size: 16px; color: var(--text); background: var(--input); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .access-card input:focus { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .access-card button { width: 100%; min-height: 48px; border: 0; border-radius: 10px; background: var(--blue); color: white; font-weight: 700; margin-top: 16px; }
+    .access-card #access-error { min-height: 20px; color: var(--red); font-size: 13px; margin: 12px 0 0; }
+    @media print {
+      body.locked > #access-screen { display: block !important; }
+      body.locked .access-card { color: black; background: white; box-shadow: none; }
+      body.locked #access-form { display: none; }
+    }
+    html { min-height: 100%; background: var(--background); }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(ellipse at top right, #241c39aa, transparent 48%), var(--background);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button, a, input, select, [tabindex] { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--blue); outline-offset: 4px;
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    ::selection { background: #185fd0; color: #fff; }
+    ::-webkit-scrollbar { width: 10px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #262830; }
+    ::-webkit-scrollbar-thumb { background: #85858b; border-radius: 12px; border: 2px solid #262830; }
+    .topbar {
+      max-width: 1600px; margin: auto; padding: 16px 22px 13px;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; letter-spacing: .8px; }
+    .brand svg { color: var(--lime); width: 23px; height: 23px; }
+    .brand span { color: var(--lime); }
+    .topbar small { color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0; margin-left: 12px; }
+    .toolbar { display: flex; align-items: center; gap: 14px; }
+    .saved { color: var(--muted); font-size: 12px; }
+    .quiet-button { border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 8px; padding: 7px 12px; font-size: 12px; }
+    .quiet-button:hover { color: #fff; border-color: var(--blue); }
+    .layout { max-width: 1600px; margin: auto; padding: 0 20px 32px; display: grid; grid-template-columns: minmax(340px, 29%) minmax(0, 1fr); gap: 24px; align-items: start; }
+    .sidebar, .results { display: grid; gap: 20px; min-width: 0; }
+    .mobile-nav { display: none; }
+    #simulator-form, #results, #chart-panel, #documents { scroll-margin-top: 76px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 22px;
+      box-shadow: inset 0 1px 2px #ffffff04, 0 6px 20px #0000000c;
+      min-width: 0;
+    }
+    h1, h2, h3, p { margin: 0; }
+    .section-title { color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: .7px; font-weight: 700; margin: 0 0 19px; }
+    .sidebar .section-title::before { content: ''; display: inline-block; width: 7px; height: 7px; background: var(--blue); border-radius: 50%; margin: 0 10px 2px 0; }
+    .fields { display: grid; gap: 14px; }
+    .field { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: 12px; }
+    .project .field { grid-template-columns: minmax(0, .85fr) minmax(0, 1.5fr); }
+    .field label, .field > .field-label { font-weight: 600; line-height: 1.28; }
+    .control { display: flex; align-items: center; position: relative; min-width: 0; background: var(--input); border: 1px solid var(--border); border-radius: 12px; height: 44px; box-shadow: inset 0 1px 2px #0002; transition: border-color .15s, box-shadow .15s; }
+    .control:focus-within { border-color: var(--blue); box-shadow: 0 0 0 1px #4189f730; }
+    .control input, .control select { width: 100%; min-width: 0; background: transparent; border: 0; outline: none; color: var(--text); padding: 10px 13px; font-weight: 700; text-align: right; }
+    .control input::placeholder { color: #8993a2; opacity: .85; }
+    .control .prefix, .control .suffix { color: var(--muted); font-weight: 700; white-space: nowrap; pointer-events: none; }
+    .control .prefix { padding-left: 12px; }
+    .control .suffix { padding-right: 12px; }
+    .control:has(.prefix) input { padding-left: 5px; }
+    .control:has(.suffix) input { padding-right: 8px; }
+    .control select { appearance: none; padding-right: 31px; cursor: pointer; }
+    .control select option { background: var(--input); color: var(--text); }
+    .select-control::after { content: ''; position: absolute; right: 14px; top: 17px; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); pointer-events: none; }
+    .control.readonly { background: #ffffff08; border-style: dashed; }
+    .control.readonly input { color: #c4cede; }
+    input[aria-invalid="true"] { color: var(--red); }
+    .control:has([aria-invalid="true"]) { border-color: var(--red); }
+    .note { color: var(--muted); font-size: 13px; line-height: 1.55; margin-top: 14px; }
+    .help { display: inline-flex; vertical-align: 1px; align-items: center; justify-content: center; border: 1px solid #718298; border-radius: 50%; width: 15px; height: 15px; font-size: 10px; line-height: 1; color: var(--muted); cursor: help; font-weight: 700; margin-left: 3px; letter-spacing: 0; text-transform: none; }
+    #tooltip { position: fixed; z-index: 100; max-width: min(290px, calc(100vw - 24px)); background: #061021; color: #e7ebf2; font-size: 12px; line-height: 1.5; padding: 11px 13px; border: 1px solid #52617a; border-radius: 9px; box-shadow: 0 8px 24px #0008; pointer-events: none; }
+    [hidden] { display: none !important; }
+    .results .section-title { color: var(--lime); margin-bottom: 16px; }
+    .metrics-panel { padding: 25px 22px 32px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .metric { min-width: 0; min-height: 101px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; background: linear-gradient(115deg, #0c1b32, #0d1931); border: 1px solid #5b762c; border-radius: 15px; padding: 15px 7px 17px; text-align: center; }
+    .metric-label { color: var(--muted); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .45px; }
+    .metric-value { font-size: clamp(22px, 2.05vw, 32px); font-weight: 900; line-height: 1.12; letter-spacing: -.55px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .insight { display: flex; align-items: center; gap: 16px; border: 1px solid #225858; border-radius: 15px; padding: 17px 20px; background: linear-gradient(100deg, #103437, #12223f); }
+    .insight > svg { color: var(--green); width: 29px; height: 29px; flex: 0 0 auto; }
+    .insight strong { font-size: 14px; color: var(--green); }
+    .insight p { font-size: 12px; color: #aec0cf; margin-top: 3px; }
+    .insight.warning { border-color: #916938; background: #342d29; }
+    .insight.warning strong, .insight.warning > svg { color: #f9c66b; }
+    .chart-panel { padding: 22px 20px 12px; }
+    .chart-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .chart-heading .section-title { font-size: 12px; margin: 0; }
+    .chart-legend { font-size: 11px; color: var(--muted); display: flex; gap: 13px; }
+    .chart-legend span::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 5px; background: var(--lime); }
+    .chart-legend span:first-child::before { background: #fa426d; }
+    .chart-wrap { width: 100%; min-width: 0; }
+    #cash-chart { display: block; width: 100%; max-width: 100%; height: 320px; }
+    .chart-empty { padding: 24px 12px; color: var(--muted); font-size: 14px; text-align: center; }
+    .chart-caption { text-align: center; color: var(--muted); font-size: 11px; padding: 0 0 7px; }
+    .actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .action { color: var(--text); background: var(--panel); border: 1px solid #48576d; border-radius: 13px; padding: 16px 13px; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: 700; font-size: 15px; line-height: 1.2; min-height: 69px; box-shadow: inset 0 1px 1px #ffffff12; transition: background .15s, transform .15s; }
+    .action:hover { background: #2d4059; transform: translateY(-1px); }
+    .action.primary { background: var(--blue); border-color: #4c8bf1; color: #fff; }
+    .action.primary:hover { background: #5499ff; }
+    .action svg { width: 23px; height: 23px; flex: 0 0 auto; }
+    .action.presentation { grid-column: 1 / -1; min-height: 48px; padding: 10px; }
+    .footer-note { font-size: 11px; color: #8493a9; text-align: center; line-height: 1.6; }
+    .assumptions { border-top: 1px solid #ffffff10; padding-top: 13px; margin-top: 15px; }
+    .assumptions summary { cursor: pointer; color: #b5c1d0; font-size: 12px; }
+    .assumptions p { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+    .icon { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-definitions { position: absolute; width: 0; height: 0; overflow: hidden; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 50; padding: 12px 22px; background: #18352e; border: 1px solid #2dd4a070; border-radius: 12px; color: #e9fff7; box-shadow: 0 6px 25px #0006; max-width: calc(100vw - 30px); text-align: center; font-size: 13px; }
+    dialog { color: var(--text); background: #152237; border: 1px solid #465871; border-radius: 18px; width: min(1080px, calc(100vw - 32px)); max-height: 90vh; padding: 0; }
+    dialog::backdrop { background: #020615cf; backdrop-filter: blur(5px); }
+    .dialog-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 17px 22px; background: #152237; border-bottom: 1px solid #39465a; }
+    .dialog-header h2 { font-size: 17px; }
+    .dialog-buttons { display: flex; gap: 10px; }
+    .dialog-buttons button { border: 1px solid #4b5e79; border-radius: 8px; padding: 8px 14px; background: #223650; color: #fff; }
+    .dialog-buttons .print-button { background: var(--blue); border-color: var(--blue); }
+    #dialog-content { padding: 24px; }
+    .paper { background: white; color: #223047; padding: 38px; border-radius: 5px; font-size: 13px; line-height: 1.5; }
+    .paper-header { border-bottom: 3px solid #7aba0c; padding-bottom: 17px; margin-bottom: 24px; display: flex; justify-content: space-between; gap: 15px; }
+    .paper-brand { font-size: 23px; font-weight: 800; color: #152237; }
+    .paper h1 { font-size: 23px; margin-bottom: 8px; }
+    .paper h2 { font-size: 16px; color: #264f5b; margin: 25px 0 10px; }
+    .paper p { margin: 9px 0; }
+    .paper .muted { color: #5f6c7a; font-size: 11px; }
+    .paper-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+    .paper-kpi { padding: 13px; border: 1px solid #d5e0e5; background: #f3f7f8; border-radius: 8px; }
+    .paper-kpi span { display: block; color: #586674; font-size: 11px; }
+    .paper-kpi strong { font-size: 18px; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid #dce3e8; }
+    th { font-size: 12px; background: #edf2f5; }
+    th:first-child, td:first-child { text-align: left; }
+    .paper-callout { border-left: 3px solid #79ae19; background: #f2f7ea; padding: 12px 16px; margin: 18px 0; }
+    .comparison-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .comparison-toolbar p { color: var(--muted); flex: 1; font-size: 13px; }
+    .comparison-toolbar button { background: var(--blue); color: #fff; border: 0; border-radius: 9px; padding: 11px 15px; }
+    .table-scroll { overflow-x: auto; }
+    .comparison-table { min-width: 600px; font-size: 13px; }
+    .comparison-table th { background: #21344d; color: #dce6f2; }
+    .comparison-table td, .comparison-table th { border-color: #35485f; }
+    .comparison-table button { background: transparent; border: 1px solid #596c84; color: #d7e5f6; padding: 5px 9px; border-radius: 6px; margin: 3px; font-size: 11px; }
+    #exit-presentation { display: none; position: fixed; right: 18px; top: 12px; z-index: 10; background: #223650; color: #fff; border: 1px solid #667993; border-radius: 9px; padding: 10px 15px; }
+    body.presenting .sidebar, body.presenting .topbar, body.presenting .actions, body.presenting .footer-note { display: none; }
+    body.presenting .layout { grid-template-columns: 1fr; max-width: 1450px; padding-top: 64px; }
+    body.presenting #exit-presentation { display: block; }
+    body.presenting .metric-value { font-size: clamp(28px, 3vw, 42px); }
+    #print-area { display: none; }
+    @media (min-width: 1450px) {
+      .field { font-size: 16px; }
+      .control { height: 46px; }
+      .metrics-panel { padding-top: 26px; padding-bottom: 34px; }
+      .metric { min-height: 103px; }
+    }
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 310px minmax(0, 1fr); gap: 18px; padding-inline: 16px; }
+      .panel { padding: 21px 17px; }
+      .field { font-size: 13px; gap: 9px; }
+      .metrics { gap: 10px; }
+      .metric-label { font-size: 10px; letter-spacing: .2px; }
+      .metric-value { font-size: 23px; }
+      .metric { min-height: 96px; padding-inline: 4px; }
+      .action { flex-direction: column; font-size: 12px; gap: 8px; padding: 12px 5px; }
+      .action.presentation { flex-direction: row; }
+      .actions { gap: 9px; }
+      .note { font-size: 12px; }
+    }
+    @media (max-width: 950px) {
+      .mobile-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; position: sticky; top: 0; z-index: 8; background: #080d23f5; padding: 9px max(12px, env(safe-area-inset-right)) 9px max(12px, env(safe-area-inset-left)); border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+      .mobile-nav a { display: flex; align-items: center; justify-content: center; min-height: 44px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 9px; text-decoration: none; font-size: 12px; font-weight: 700; }
+      .mobile-nav a[href="#simulator-form"] { background: var(--blue); border-color: var(--blue); color: white; }
+      .layout { display: flex; flex-direction: column; padding: 0 max(12px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); gap: 20px; }
+      .sidebar, .results { width: 100%; gap: 16px; }
+      .results { order: -1; }
+      .results > .metrics-panel:first-child { order: -2; }
+      .results > .chart-panel { order: -1; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .control { min-height: 48px; }
+      .control input, .control select { font-size: 16px; }
+      .quiet-button, .dialog-buttons button { min-height: 44px; }
+      body.presenting .mobile-nav { display: none; }
+      body.presenting .metric-value { font-size: clamp(18px, 5.6vw, 32px); }
+      .chart-legend { flex-wrap: wrap; }
+    }
+    @media (max-width: 740px) {
+      .topbar { padding: 17px 14px; }
+      .topbar small, .saved { display: none; }
+      .layout { display: flex; flex-direction: column; padding: 0 12px 24px; gap: 20px; }
+      .sidebar, .results { width: 100%; gap: 16px; }
+      .panel { padding: 22px 18px; border-radius: 17px; }
+      .field { font-size: 14px; grid-template-columns: 1.1fr 1fr; }
+      .project .field { grid-template-columns: 1fr; gap: 6px; }
+      .project .field label br { display: none; }
+      .project .control input { text-align: left; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .metric-value { font-size: clamp(18px, 6vw, 27px); }
+      .metric-label { font-size: 11px; }
+      .section-title { font-size: 12px; }
+      .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .action { flex-direction: row; padding: 15px; font-size: 13px; }
+      .action[data-action="compare"] { grid-column: 1 / -1; }
+      .paper { padding: 20px 15px; }
+      .paper-grid { grid-template-columns: repeat(2, 1fr); }
+      .paper-kpi { min-width: 0; padding: 10px; overflow-wrap: anywhere; }
+      .paper-kpi strong { font-size: 16px; }
+      .paper { overflow-wrap: anywhere; }
+      dialog { width: calc(100% - 16px); max-width: calc(100% - 16px); max-height: 92vh; max-height: 92dvh; }
+      .dialog-buttons { width: 100%; }
+      .dialog-buttons .print-button { flex: 1; }
+      .table-scroll { max-width: 100%; -webkit-overflow-scrolling: touch; }
+      #dialog-content { padding: 12px; }
+      .dialog-header { padding: 13px; flex-wrap: wrap; }
+      .paper-header { flex-direction: column; }
+      .chart-panel { padding-inline: 12px; }
+      .insight { align-items: flex-start; }
+      body.presenting .layout { display: block; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+    @page { size: A4; margin: 14mm; }
+    @media print {
+      :root { color-scheme: light; }
+      html, body { background: #fff !important; color: #223047; }
+      body > * { display: none !important; }
+      body > #print-area { display: block !important; }
+      #print-area .paper { padding: 0; font-size: 10pt; }
+      .paper { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .paper h2 { break-after: avoid; }
+      .paper-header, .paper-kpi, tr, .paper-callout { break-inside: avoid; }
+      thead { display: table-header-group; }
+      th, td { padding: 6px 8px; }
+      .paper-grid { grid-template-columns: repeat(4, 1fr); }
+      .paper-kpi strong { font-size: 14px; }
+      .table-scroll { overflow: visible; }
+      dialog { display: none !important; }
+    }
+  </style>
+</head>
+<body class="locked">
+  <section id="access-screen" aria-labelledby="access-title">
+    <div class="access-card">
+      <div class="access-brand">PW ENERGY</div>
+      <h1 id="access-title">Acesso ao simulador</h1>
+      <p>Informe a senha para abrir a calculadora de eletroposto.</p>
+      <form id="access-form">
+        <label for="access-password">Senha de acesso</label>
+        <input id="access-password" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required aria-describedby="access-error">
+        <button type="submit">Entrar no simulador</button>
+        <p id="access-error" role="alert" aria-live="polite"></p>
+      </form>
+      <noscript>Ative o JavaScript e abra este HTML no navegador para inserir a senha.</noscript>
+    </div>
+  </section>
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-13h-8z"/></symbol>
+    <symbol id="i-document" viewBox="0 0 24 24"><path d="M14 2H5v20h14V7zM14 2v6h5M8 12h8M8 16h8"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 18 6-6 4 4 3-4 5 6"/></symbol>
+    <symbol id="i-dollar" viewBox="0 0 24 24"><path d="M12 2v20m6-16H9a4 4 0 0 0 0 8h6a4 4 0 0 1 0 8H5" transform="translate(0 -2)"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20v-7m7 7V4m7 16V9"/></symbol>
+    <symbol id="i-screen" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M12 17v4m-5 0h10"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 7-7 4 4 7-8m-6 0h6v6"/></symbol>
+  </svg>
+  <header class="topbar">
+    <div class="brand"><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg> PW <span>ENERGY</span><small>Simulador de eletroposto</small></div>
+    <div class="toolbar"><span class="saved" id="save-status">Salvo neste navegador</span><button class="quiet-button" id="reset-button" type="button">Restaurar padrão</button></div>
+  </header>
+
+  <nav class="mobile-nav" aria-label="Navegação da simulação">
+    <a href="#simulator-form">Editar dados</a>
+    <a href="#results">Resultados</a>
+    <a href="#chart-panel">Gráfico</a>
+    <a href="#documents">PDFs</a>
+  </nav>
+
+  <main class="layout">
+    <form class="sidebar" id="simulator-form" novalidate aria-label="Parâmetros do eletroposto">
+      <section class="panel project" aria-labelledby="project-title">
+        <h2 class="section-title" id="project-title">Projeto</h2>
+        <div class="fields">
+          <div class="field"><label for="client">Preparado para</label><div class="control"><input id="client" name="client" placeholder="Ex: Grupo Andrade" maxlength="100" autocomplete="organization"></div></div>
+          <div class="field"><label for="city">Cidade / local</label><div class="control"><input id="city" name="city" placeholder="Ex: Uberlândia-MG" maxlength="100" autocomplete="address-level2"></div></div>
+          <div class="field"><label for="power">Potência<br>Carregador</label><div class="control select-control"><select id="power" name="power"><option value="7.4">AC 7,4 kW</option><option value="22">AC 22 kW</option><option value="30">DC 30 kW</option><option value="40">DC 40 kW</option><option value="60">DC 60 kW</option><option value="80" selected>DC 80 kW</option><option value="120">DC 120 kW</option><option value="150">DC 150 kW</option><option value="180">DC 180 kW</option><option value="240">DC 240 kW</option><option value="300">DC 300 kW</option><option value="360">DC 360 kW</option></select></div></div>
+          <div class="field"><label for="seller">Vendedor</label><div class="control"><input id="seller" name="seller" placeholder="Nome do vendedor" maxlength="80" autocomplete="off"></div></div>
+          <div class="field"><label for="contact">Contato do<br>vendedor</label><div class="control"><input id="contact" name="contact" placeholder="Telefone do vendedor" maxlength="40" autocomplete="off"></div></div>
+        </div>
+        <p class="note">Os dados do cliente, vendedor e contato são utilizados em todos os documentos. Preencha as informações do projeto antes de gerar o estudo ou os orçamentos.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="operation-title">
+        <h2 class="section-title" id="operation-title">Dados da operação</h2>
+        <div class="fields">
+          <div class="field"><label for="cars">Quantidade de carros por dia <span class="help" data-tip="Total de recargas por dia no eletroposto inteiro, em regime pleno. Não é multiplicado pelo número de bicos.">?</span></label><div class="control"><input id="cars" name="cars" data-number data-min="0" data-max="10000" data-digits="0" inputmode="numeric" value="10"></div></div>
+          <div class="field"><label for="energy">Média de carga por carro <span class="help" data-tip="Energia média vendida em cada sessão de recarga.">?</span></label><div class="control"><input id="energy" name="energy" data-number data-min="0.1" data-max="1000" data-digits="1" inputmode="decimal" value="20"><span class="suffix">kWh</span></div></div>
+          <div class="field"><label for="energyCost">Custo do kWh <span class="help" data-tip="Custo efetivo da energia comprada, incluindo tarifas e tributos da conta de luz. Demanda contratada pode ser incluída nos outros custos fixos.">?</span></label><div class="control"><span class="prefix">R$</span><input id="energyCost" name="energyCost" data-number data-min="0" data-max="100" data-digits="2" inputmode="decimal" value="0,70"></div></div>
+          <div class="field"><label for="salePrice">Preço kWh revenda <span class="help" data-tip="Preço cobrado por kWh entregue ao veículo.">?</span></label><div class="control"><span class="prefix">R$</span><input id="salePrice" name="salePrice" data-number data-min="0" data-max="100" data-digits="2" inputmode="decimal" value="2,20"></div></div>
+          <div class="field"><label for="activation">Taxa de ativação <span class="help" data-tip="Valor adicional cobrado por sessão de recarga; também compõe a receita tributável.">?</span></label><div class="control"><span class="prefix">R$</span><input id="activation" name="activation" data-number data-min="0" data-max="10000" data-digits="2" inputmode="decimal" value="1,50"></div></div>
+          <div class="field"><label for="days">Dias de operação/mês <span class="help" data-tip="O modelo usa meses equivalentes. O padrão de 30 dias representa 360 dias operacionais por ano.">?</span></label><div class="control"><input id="days" name="days" data-number data-min="1" data-max="31" data-digits="0" inputmode="numeric" value="30"></div></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="investment-title">
+        <h2 class="section-title" id="investment-title">Investimento</h2>
+        <div class="fields">
+          <div class="field"><label for="chargers">Quantidade de carregadores <span class="help" data-tip="Quantidade de equipamentos instalados. Altera a capacidade física; atualize o investimento total manualmente ao alterar a quantidade.">?</span></label><div class="control"><input id="chargers" name="chargers" data-number data-min="1" data-max="1000" data-digits="0" inputmode="numeric" value="1"></div></div>
+          <div class="field"><label for="connectors">Bicos de carregamento <span class="help" data-tip="Número total de conectores no eletroposto. Os bicos compartilham a potência dos equipamentos; não multiplicam a receita automaticamente.">?</span></label><div class="control"><input id="connectors" name="connectors" data-number data-min="1" data-max="10000" data-digits="0" inputmode="numeric" value="2"></div></div>
+          <div class="field"><label for="investment">Investimento total <span class="help" data-tip="CAPEX total no instante zero: equipamentos, instalação, obras, projeto e demais despesas iniciais. Valor informado, não é um preço automático do equipamento.">?</span></label><div class="control"><span class="prefix">R$</span><input id="investment" name="investment" data-number data-min="0" data-max="1000000000" data-digits="0" inputmode="decimal" value="145.000"></div></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="cost-title">
+        <h2 class="section-title" id="cost-title">Custos e taxas</h2>
+        <div class="fields">
+          <div class="field"><label for="gateway">Gateway <span class="help" data-tip="Taxa de gestão e pagamento calculada sobre o faturamento bruto.">?</span></label><div class="control"><input id="gateway" name="gateway" data-number data-min="0" data-max="100" data-digits="2" inputmode="decimal" value="10"><span class="suffix">%</span></div></div>
+          <div class="field"><label for="rent">Arrendamento do ponto <span class="help" data-tip="Repasse ao proprietário do ponto, como percentual do faturamento bruto.">?</span></label><div class="control"><input id="rent" name="rent" data-number data-min="0" data-max="100" data-digits="2" inputmode="decimal" value="10"><span class="suffix">%</span></div></div>
+          <div class="field"><label for="maintenance">Manutenção <span class="help" data-tip="Provisão de manutenção como percentual do faturamento bruto, conforme o modelo das referências.">?</span></label><div class="control"><input id="maintenance" name="maintenance" data-number data-min="0" data-max="100" data-digits="2" inputmode="decimal" value="0,1"><span class="suffix">%</span></div></div>
+          <div class="field"><label for="subscription">Assinatura mensal <span class="help" data-tip="Custo fixo mensal da plataforma de gestão, além da taxa percentual de gateway.">?</span></label><div class="control"><span class="prefix">R$</span><input id="subscription" name="subscription" data-number data-min="0" data-max="10000000" data-digits="2" inputmode="decimal" value="300"></div></div>
+          <div class="field"><label for="insurance">Seguro | Ano <span class="help" data-tip="Estimativa automática de 1% do investimento total ao ano. O custo é dividido por 12 nos resultados mensais.">?</span></label><div class="control readonly"><span class="prefix">R$</span><input id="insurance" value="1.450" readonly aria-readonly="true"></div></div>
+          <div class="field"><label for="tax">Imposto — Simples Nacional <span class="help" data-tip="Alíquota efetiva estimada sobre o faturamento bruto. Não calcula faixas ou enquadramento tributário; valide com seu contador.">?</span></label><div class="control"><input id="tax" name="tax" data-number data-min="0" data-max="100" data-digits="2" inputmode="decimal" value="6"><span class="suffix">%</span></div></div>
+          <div class="field"><label for="otherFixed">Outros custos fixos/mês <span class="help" data-tip="Inclua demanda contratada, internet, aluguel fixo, pessoal, contabilidade e outras despesas não contempladas.">?</span></label><div class="control"><span class="prefix">R$</span><input id="otherFixed" name="otherFixed" data-number data-min="0" data-max="10000000" data-digits="2" inputmode="decimal" value="0"></div></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="finance-title">
+        <h2 class="section-title" id="finance-title">Modelagem financeira</h2>
+        <div class="fields">
+          <div class="field"><label for="initialOccupancy">Ocupação inicial <span class="help" data-tip="Percentual do volume pleno no primeiro mês. Cresce linearmente até 100% no último mês da rampa.">?</span></label><div class="control"><input id="initialOccupancy" name="initialOccupancy" data-number data-min="0" data-max="100" data-digits="1" inputmode="decimal" value="50"><span class="suffix">%</span></div></div>
+          <div class="field"><label for="rampMonths">Rampa de ocupação <span class="help" data-tip="Meses até atingir o volume pleno. No padrão de 6 meses: 50%, 60%, 70%, 80%, 90%, 100%. Zero desativa a rampa; um aplica a ocupação inicial apenas no primeiro mês.">?</span></label><div class="control"><input id="rampMonths" name="rampMonths" data-number data-min="0" data-max="120" data-digits="0" inputmode="numeric" value="6"><span class="suffix">meses</span></div></div>
+          <div class="field"><label for="discount">Taxa de desconto <span class="help" data-tip="Taxa mínima de atratividade anual usada para descontar os fluxos anuais no VPL. Não é uma taxa atual consultada em tempo real.">?</span></label><div class="control"><input id="discount" name="discount" data-number data-min="0" data-max="100" data-digits="2" inputmode="decimal" value="14,25"><span class="suffix">% a.a.</span></div></div>
+          <div class="field"><label for="years">Horizonte da análise <span class="help" data-tip="Prazo para VPL, TIR, ROI e gráfico. Receitas e custos permanecem constantes após a rampa, sem inflação, reajustes ou valor residual.">?</span></label><div class="control"><input id="years" name="years" data-number data-min="1" data-max="30" data-digits="0" inputmode="numeric" value="10"><span class="suffix">anos</span></div></div>
+        </div>
+        <details class="assumptions"><summary>Premissas e fórmulas do modelo</summary><p>Faturamento = carros/dia × dias/mês × (kWh/carro × preço de revenda + ativação). Custos = energia + percentuais sobre o faturamento + despesas fixas + seguro anual ÷ 12.</p><p>O seguro é estimado em 1% do investimento/ano. A rampa reduz apenas o volume e os custos variáveis. O investimento é desembolsado no início. TIR e VPL usam fluxos no fim de cada ano; payback simples usa interpolação anual; ROI = lucro acumulado menos investimento, dividido pelo investimento.</p><p>Não inclui financiamento, depreciação, inflação, reposição de equipamentos, valor residual ou perdas elétricas separadas. Incorpore perdas no custo efetivo do kWh. Quantidade e potência são dados de capacidade, não multiplicadores automáticos de demanda ou de CAPEX.</p></details>
+      </section>
+    </form>
+
+    <div class="results" id="results" aria-label="Resultados da simulação">
+      <section class="panel metrics-panel" aria-labelledby="monthly-title">
+        <h2 class="section-title" id="monthly-title">Resultado por mês (regime pleno) <span class="help" data-tip="Projeção mensal após atingir 100% do volume de recargas informado.">?</span></h2>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Faturamento <span class="help" data-tip="Receita total com energia e taxa de ativação, antes dos custos e impostos.">?</span></div><output class="metric-value" id="monthly-revenue">—</output></div>
+          <div class="metric"><div class="metric-label">Custos + imposto <span class="help" data-tip="Energia, gateway, arrendamento, manutenção, assinatura, seguro, imposto e demais custos fixos.">?</span></div><output class="metric-value negative" id="monthly-cost">—</output></div>
+          <div class="metric"><div class="metric-label">Lucro <span class="help" data-tip="Faturamento menos custos e impostos estimados. Não inclui financiamento ou depreciação.">?</span></div><output class="metric-value positive" id="monthly-profit">—</output></div>
+          <div class="metric"><div class="metric-label">Margem <span class="help" data-tip="Lucro mensal dividido pelo faturamento mensal. Sem receita, a margem é indefinida.">?</span></div><output class="metric-value" id="margin">—</output></div>
+        </div>
+      </section>
+      <section class="panel metrics-panel" aria-labelledby="annual-title">
+        <h2 class="section-title" id="annual-title">Resultado por ano (regime pleno) <span class="help" data-tip="12 meses equivalentes de operação plena. O lucro do ano 1 considera a rampa de ocupação.">?</span></h2>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Faturamento <span class="help" data-tip="Faturamento mensal em regime pleno multiplicado por 12.">?</span></div><output class="metric-value" id="annual-revenue">—</output></div>
+          <div class="metric"><div class="metric-label">Custos + impostos <span class="help" data-tip="Custos e impostos mensais em regime pleno multiplicados por 12.">?</span></div><output class="metric-value negative" id="annual-cost">—</output></div>
+          <div class="metric"><div class="metric-label">Lucro <span class="help" data-tip="Lucro mensal em regime pleno multiplicado por 12.">?</span></div><output class="metric-value positive" id="annual-profit">—</output></div>
+          <div class="metric"><div class="metric-label">Lucro ano 1 (rampa) <span class="help" data-tip="Soma dos 12 primeiros meses considerando ocupação gradual e custos fixos integrais desde o início.">?</span></div><output class="metric-value" id="first-year">—</output></div>
+        </div>
+      </section>
+      <section class="panel metrics-panel" aria-labelledby="return-title">
+        <h2 class="section-title" id="return-title">Retorno do investimento</h2>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">TIR <span class="help" data-tip="Taxa interna de retorno anual que zera o VPL. Sem investimento inicial ou sem mudança de sinal no fluxo, não é calculável.">?</span></div><output class="metric-value" id="irr">—</output></div>
+          <div class="metric"><div class="metric-label"><span id="npv-label">VPL @ 14,25%</span> <span class="help" data-tip="Valor presente dos lucros anuais descontados pela taxa informada, menos o investimento inicial.">?</span></div><output class="metric-value positive" id="npv">—</output></div>
+          <div class="metric"><div class="metric-label">Payback <span class="help" data-tip="Tempo de retorno simples, sem desconto, com interpolação do fluxo do ano de recuperação. Não extrapola além do horizonte informado.">?</span></div><output class="metric-value" id="payback">—</output></div>
+          <div class="metric"><div class="metric-label"><span id="roi-label">ROI 10 anos</span> <span class="help" data-tip="(Soma dos lucros no horizonte − investimento inicial) ÷ investimento inicial. Retorno líquido acumulado, não anualizado.">?</span></div><output class="metric-value" id="roi">—</output></div>
+        </div>
+      </section>
+      <div class="insight" id="insight" role="status" aria-live="polite"><svg class="icon" aria-hidden="true"><use href="#i-trend"/></svg><div><strong id="insight-title">Calculando viabilidade…</strong><p id="insight-description">Altere os parâmetros para atualizar a simulação.</p></div></div>
+      <section class="panel chart-panel" id="chart-panel" aria-labelledby="chart-title">
+        <div class="chart-heading"><h2 class="section-title" id="chart-title">Fluxo de caixa | Anual (10 anos)</h2><div class="chart-legend"><span>Não recuperado</span><span>Saldo positivo</span></div></div>
+        <div class="chart-wrap"><svg id="cash-chart" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="chart-title chart-description"><desc id="chart-description">Saldo acumulado ao fim de cada ano, descontado o investimento inicial.</desc></svg></div>
+        <p class="chart-empty" id="chart-empty" hidden>Corrija os campos destacados em “Editar dados” para visualizar o gráfico.</p>
+        <p class="chart-caption">Saldo acumulado após o investimento inicial · valores nominais em R$</p>
+      </section>
+      <div class="actions" id="documents" aria-label="Documentos e ferramentas">
+        <button type="button" class="action primary" data-report="study"><svg class="icon" aria-hidden="true"><use href="#i-document"/></svg><span>Estudo de<br>Viabilidade</span></button>
+        <button type="button" class="action" data-report="simulator"><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg><span>Simulador em<br>PDF</span></button>
+        <button type="button" class="action primary" data-report="basic"><svg class="icon" aria-hidden="true"><use href="#i-dollar"/></svg><span>Orçamento<br>básico</span></button>
+        <button type="button" class="action" data-report="complete"><svg class="icon" aria-hidden="true"><use href="#i-document"/></svg><span>Orçamento<br>completo</span></button>
+        <button type="button" class="action" data-action="compare"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>Comparar<br>cenários</span></button>
+        <button type="button" class="action presentation" data-action="presentation"><svg class="icon" aria-hidden="true"><use href="#i-screen"/></svg><span>Apresentação</span></button>
+      </div>
+      <p class="footer-note">Projeção estimativa, não constitui garantia de rentabilidade. Valide tarifas, demanda, tributos e custos de implantação.<br>Funciona offline · dados salvos apenas neste navegador · valores exibidos arredondados, cálculos com precisão integral.</p>
+    </div>
+  </main>
+
+  <button type="button" id="exit-presentation">Sair da apresentação · Esc</button>
+  <dialog id="document-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">Documento</h2><div class="dialog-buttons"><button type="button" class="print-button" id="print-button">Imprimir / Salvar PDF</button><button type="button" id="close-dialog" aria-label="Fechar documento">Fechar ×</button></div></div><div id="dialog-content"></div></dialog>
+  <div id="tooltip" role="tooltip" hidden></div>
+  <div id="toast" role="status" hidden></div>
+  <div id="print-area"></div>
+  <noscript><p style="padding:24px;color:#ff7378">Ative o JavaScript do navegador para utilizar os cálculos do simulador.</p></noscript>
+
+  <script>
+    'use strict';
+    // Bloqueio local de interface; não substitui criptografia ou autenticação em servidor.
+    function initializeSimulator() {
+    // Todos os cálculos e recursos são locais, sem bibliotecas ou conexão externa.
+    const DEFAULTS = Object.freeze({
+      client: '', city: '', power: 80, seller: '', contact: '',
+      cars: 10, energy: 20, energyCost: .70, salePrice: 2.20, activation: 1.50, days: 30,
+      chargers: 1, connectors: 2, investment: 145000,
+      gateway: 10, rent: 10, maintenance: .1, subscription: 300, tax: 6, otherFixed: 0,
+      initialOccupancy: 50, rampMonths: 6, discount: 14.25, years: 10
+    });
+    const STORAGE_KEY = 'pw-energy-simulator-v1';
+    const SCENARIOS_KEY = 'pw-energy-scenarios-v1';
+    const $ = id => document.getElementById(id);
+    const numberFormatters = new Map();
+    function number(value, digits = 0, minimum = digits) {
+      if (!Number.isFinite(value)) return '—';
+      const key = `${digits}-${minimum}`;
+      if (!numberFormatters.has(key)) numberFormatters.set(key, new Intl.NumberFormat('pt-BR', { minimumFractionDigits: minimum, maximumFractionDigits: digits }));
+      return numberFormatters.get(key).format(Object.is(value, -0) ? 0 : value);
+    }
+    function money(value, digits = 0) {
+      if (!Number.isFinite(value)) return '—';
+      return `${value < 0 ? '-R$' : 'R$'} ${number(Math.abs(value), digits)}`;
+    }
+    function percent(value, digits = 2) { return Number.isFinite(value) ? `${number(value, digits)}%` : '—'; }
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+    }
+    function parseNumber(raw) {
+      const text = String(raw).trim().replace(/\s|\u00a0/g, '');
+      if (!text) return NaN;
+      if (text.includes(',')) {
+        if (!/^-?(?:\d+|\d{1,3}(?:\.\d{3})+),\d+$/.test(text)) return NaN;
+        return Number(text.replace(/\./g, '').replace(',', '.'));
+      }
+      if (/^-?\d{1,3}(?:\.\d{3})+$/.test(text)) return Number(text.replace(/\./g, ''));
+      if (!/^-?(?:\d+(?:\.\d+)?|\.\d+)$/.test(text)) return NaN;
+      return Number(text);
+    }
+
+    // Fluxos no fim de cada ano; o fluxo zero representa o investimento inicial.
+    function netPresentValue(rate, flows) {
+      return flows.reduce((sum, cash, year) => sum + cash / Math.pow(1 + rate, year), 0);
+    }
+    function internalRateOfReturn(flows) {
+      if (flows[0] >= 0 || !flows.slice(1).some(value => value > 0)) return null;
+      let low = -.999999;
+      let high = 1;
+      while (netPresentValue(high, flows) > 0 && high < 1e12) high = high * 2 + 1;
+      if (netPresentValue(low, flows) <= 0 || netPresentValue(high, flows) > 0) return null;
+      for (let iteration = 0; iteration < 180; iteration++) {
+        const middle = (low + high) / 2;
+        if (netPresentValue(middle, flows) > 0) low = middle;
+        else high = middle;
+      }
+      return (low + high) / 2;
+    }
+    function calculate(data) {
+      const sessions = data.cars * data.days;
+      const kwh = sessions * data.energy;
+      const revenue = sessions * (data.energy * data.salePrice + data.activation);
+      const costs = {
+        electricity: kwh * data.energyCost,
+        gateway: revenue * data.gateway / 100,
+        rent: revenue * data.rent / 100,
+        maintenance: revenue * data.maintenance / 100,
+        subscription: data.subscription,
+        insurance: data.investment * .01 / 12,
+        tax: revenue * data.tax / 100,
+        otherFixed: data.otherFixed
+      };
+      const variableCost = costs.electricity + costs.gateway + costs.rent + costs.maintenance + costs.tax;
+      const fixedCost = costs.subscription + costs.insurance + costs.otherFixed;
+      const totalCost = variableCost + fixedCost;
+      const profit = revenue - totalCost;
+      const flows = [-data.investment];
+      const annual = [];
+      let cumulative = -data.investment;
+      let payback = data.investment === 0 ? 0 : null;
+      for (let year = 0; year < data.years; year++) {
+        let yearRevenue = 0;
+        let yearCosts = 0;
+        let yearSessions = 0;
+        for (let month = 0; month < 12; month++) {
+          const index = year * 12 + month;
+          let occupancy = 1;
+          if (index < data.rampMonths) {
+            occupancy = data.rampMonths === 1 ? data.initialOccupancy / 100
+              : data.initialOccupancy / 100 + (1 - data.initialOccupancy / 100) * index / (data.rampMonths - 1);
+          }
+          yearRevenue += revenue * occupancy;
+          yearCosts += variableCost * occupancy + fixedCost;
+          yearSessions += sessions * occupancy;
+        }
+        const cash = yearRevenue - yearCosts;
+        const previous = cumulative;
+        cumulative += cash;
+        if (payback === null && previous < 0 && cumulative >= 0 && cash > 0) payback = year + (-previous / cash);
+        flows.push(cash);
+        annual.push({ year: year + 1, revenue: yearRevenue, costs: yearCosts, cash, cumulative, sessions: yearSessions });
+      }
+      const contributionPerSession = (data.energy * data.salePrice + data.activation)
+        * (1 - (data.gateway + data.rent + data.maintenance + data.tax) / 100) - data.energy * data.energyCost;
+      const breakEvenCars = contributionPerSession > 0 ? fixedCost / contributionPerSession / data.days : null;
+      return {
+        sessions, kwh, revenue, costs, totalCost, variableCost, fixedCost, profit,
+        margin: revenue > 0 ? profit / revenue * 100 : null,
+        annualRevenue: revenue * 12, annualCost: totalCost * 12, annualProfit: profit * 12,
+        firstYear: annual[0].cash, flows, annual, cumulative,
+        npv: netPresentValue(data.discount / 100, flows), irr: internalRateOfReturn(flows),
+        payback, roi: data.investment > 0 ? cumulative / data.investment * 100 : null,
+        breakEvenCars, capacityUse: data.cars * data.energy / (data.power * data.chargers * 24) * 100
+      };
+    }
+
+    const form = $('simulator-form');
+    const numericInputs = Array.from(form.querySelectorAll('[data-number]'));
+    const allowedPowers = Array.from($('power').options, option => Number(option.value));
+    let currentData = { ...DEFAULTS };
+    let currentResult = null;
+    let valid = true;
+    let savedScenarios = [];
+    let toastTimer;
+    let storageAvailable = true;
+    let reportHTML = '';
+
+    function validNumber(input, value) {
+      return Number.isFinite(value) && value >= Number(input.dataset.min) && value <= Number(input.dataset.max)
+        && (input.dataset.digits !== '0' || Number.isInteger(value));
+    }
+    function sanitizeData(source) {
+      const data = { ...DEFAULTS };
+      if (!source || typeof source !== 'object') return data;
+      for (const key of ['client', 'city', 'seller', 'contact']) {
+        if (typeof source[key] === 'string') data[key] = source[key].slice(0, $(key).maxLength);
+      }
+      // Não restaurar os antigos dados de demonstração salvos no navegador.
+      if (data.seller.trim().toLowerCase() === 'thiago') data.seller = '';
+      if (data.contact.replace(/\D/g, '').replace(/^55(?=\d{11}$)/, '') === '34991360223') data.contact = '';
+      if (allowedPowers.includes(Number(source.power))) data.power = Number(source.power);
+      for (const input of numericInputs) {
+        if (typeof source[input.id] === 'number' && validNumber(input, source[input.id])) data[input.id] = source[input.id];
+      }
+      return data;
+    }
+    function formatInput(input, value) {
+      const digits = Number(input.dataset.digits);
+      const minimum = ['energyCost', 'salePrice', 'activation'].includes(input.id) ? 2 : 0;
+      input.value = number(value, digits, minimum);
+    }
+    function applyData(data) {
+      for (const key of Object.keys(DEFAULTS)) {
+        const input = $(key);
+        if (input.hasAttribute('data-number')) formatInput(input, data[key]);
+        else input.value = String(data[key]);
+        input.removeAttribute('aria-invalid');
+      }
+    }
+    function readData() {
+      const data = { ...DEFAULTS };
+      const errors = [];
+      for (const key of ['client', 'city', 'seller', 'contact']) data[key] = $(key).value.trim();
+      data.power = Number($('power').value);
+      for (const input of numericInputs) {
+        const value = parseNumber(input.value);
+        const isValid = validNumber(input, value);
+        input.setAttribute('aria-invalid', String(!isValid));
+        if (!isValid) errors.push(input);
+        data[input.id] = value;
+      }
+      return { data, errors };
+    }
+    function saveData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
+        $('save-status').textContent = 'Salvo neste navegador';
+        storageAvailable = true;
+      } catch {
+        storageAvailable = false;
+        $('save-status').textContent = 'Dados apenas nesta sessão';
+      }
+    }
+    function persistScenarios() {
+      try { localStorage.setItem(SCENARIOS_KEY, JSON.stringify(savedScenarios)); return true; }
+      catch { return false; }
+    }
+    function toast(message) {
+      clearTimeout(toastTimer);
+      $('toast').textContent = message;
+      $('toast').hidden = false;
+      toastTimer = setTimeout(() => { $('toast').hidden = true; }, 3800);
+    }
+    function setMetric(id, text, signedValue) {
+      const element = $(id);
+      element.textContent = text;
+      if (signedValue !== undefined) {
+        element.classList.toggle('negative', signedValue < 0);
+        element.classList.toggle('positive', signedValue >= 0);
+      }
+      // Mantém valores altos dentro dos cartões sem perder a precisão apresentada.
+      element.style.fontSize = text.length > 13 ? 'clamp(15px, 1.6vw, 24px)' : '';
+    }
+    function renderChart(data, result) {
+      const svg = $('cash-chart');
+      // Medir o contêiner real evita cortes em celulares e ao girar a tela.
+      const width = Math.max(240, Math.floor(svg.parentElement.getBoundingClientRect().width));
+      const horizontal = width < 600 || width / data.years < 58;
+      const height = horizontal ? 42 + data.years * 34 : 320;
+      svg.removeAttribute('hidden');
+      $('chart-empty').hidden = true;
+      svg.style.height = `${height}px`;
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.dataset.orientation = horizontal ? 'horizontal' : 'vertical';
+      $('chart-title').textContent = `Fluxo de caixa | Anual (${data.years} ${data.years === 1 ? 'ano' : 'anos'})`;
+      const values = result.annual.map(row => row.cumulative);
+      const maximum = Math.max(0, ...values);
+      const minimum = Math.min(0, ...values);
+      let markup = '<desc id="chart-description">Saldo acumulado ao fim de cada ano, descontado o investimento inicial. ';
+      markup += result.annual.map(row => `Ano ${row.year}: ${money(row.cumulative)}.`).join(' ') + '</desc>';
+      if (horizontal) {
+        // Um ano por linha: todos os valores legíveis, sem arrastar para os lados.
+        const start = 32;
+        const end = width - 118;
+        const scale = value => start + (value - minimum) / (maximum - minimum || 1) * (end - start);
+        const zero = scale(0);
+        markup += `<g font-family="Arial, sans-serif" font-size="11" fill="#a8b5c7"><text x="0" y="16">Ano</text><text x="${width - 2}" y="16" text-anchor="end">Saldo acumulado</text></g>`;
+        markup += `<line x1="${zero}" x2="${zero}" y1="25" y2="${height - 8}" stroke="#738297" stroke-opacity=".65"/>`;
+        for (const row of result.annual) {
+          const y = 29 + (row.year - 1) * 34;
+          const position = scale(row.cumulative);
+          const color = row.cumulative >= 0 ? '#8bd40b' : '#fa426d';
+          const labelColor = row.cumulative >= 0 ? '#9bdf24' : '#ff7b93';
+          const label = money(row.cumulative);
+          markup += `<g><title>Ano ${row.year} — lucro: ${money(row.cash)}; saldo acumulado: ${label}</title>`;
+          markup += `<text x="3" y="${y + 16}" font-family="Arial, sans-serif" font-size="12" fill="#a8b5c7">${row.year}</text>`;
+          markup += `<rect x="${Math.min(zero, position)}" y="${y}" width="${Math.max(1, Math.abs(position - zero))}" height="23" rx="4" fill="${color}"/>`;
+          markup += `<text x="${width - 2}" y="${y + 16}" text-anchor="end" font-family="Arial, sans-serif" font-size="${label.length > 16 ? 9 : 12}" font-weight="700" fill="${labelColor}">${label}</text></g>`;
+        }
+        svg.innerHTML = markup;
+        return;
+      }
+      const left = 14;
+      const right = width - 14;
+      const top = 42;
+      const bottom = 263;
+      const range = maximum - minimum || 1;
+      const high = maximum + range * .17;
+      const low = minimum - range * .20;
+      const scale = value => top + (high - value) / (high - low) * (bottom - top);
+      const baseline = scale(0);
+      const step = (right - left) / data.years;
+      const barWidth = Math.min(53, step * .58);
+      markup += `<line x1="${left}" x2="${right}" y1="${baseline}" y2="${baseline}" stroke="#738297" stroke-opacity=".65"/>`;
+      for (const row of result.annual) {
+        const center = left + step * (row.year - .5);
+        const position = scale(row.cumulative);
+        const y = Math.min(position, baseline);
+        const barHeight = Math.max(Math.abs(position - baseline), 1);
+        const color = row.cumulative >= 0 ? '#8bd40b' : '#fa426d';
+        const labelColor = row.cumulative >= 0 ? '#9bdf24' : '#ff7b93';
+        const labelY = row.cumulative >= 0 ? y - 9 : y + barHeight + 15;
+        markup += `<g><title>Ano ${row.year} — lucro: ${money(row.cash)}; saldo acumulado: ${money(row.cumulative)}</title>`;
+        markup += `<rect x="${center - barWidth / 2}" y="${y}" width="${barWidth}" height="${barHeight}" rx="5" fill="${color}"/>`;
+        markup += `<text x="${center}" y="${labelY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${money(row.cumulative).length > 14 ? 8 : 10}" font-weight="700" fill="${labelColor}">${money(row.cumulative)}</text>`;
+        markup += `<text x="${center}" y="301" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="600" fill="#a8b5c7">${row.year}</text></g>`;
+      }
+      svg.innerHTML = markup;
+      $('chart-title').textContent = `Fluxo de caixa | Anual (${data.years} ${data.years === 1 ? 'ano' : 'anos'})`;
+    }
+    function renderInsight(data, result) {
+      const warnings = [];
+      if (result.capacityUse > 100) warnings.push('O volume de energia excede a capacidade teórica de operação por 24 horas. Revise a potência, a quantidade de equipamentos ou a demanda.');
+      if (data.connectors < data.chargers) warnings.push('Há menos bicos que carregadores. Confira a configuração física informada.');
+      if (data.gateway + data.rent + data.maintenance + data.tax >= 100) warnings.push('As taxas sobre o faturamento somam 100% ou mais.');
+      if (data.rampMonths > data.years * 12) warnings.push('O regime pleno só será alcançado após o horizonte da análise.');
+      if (data.investment === 0) warnings.push('Informe o investimento para calcular a TIR e o ROI. O VPL considera CAPEX zero.');
+      const isViable = result.npv > 0 && result.profit > 0 && data.investment > 0;
+      $('insight').classList.toggle('warning', warnings.length > 0 || !isViable);
+      $('insight-title').textContent = warnings.length ? 'Atenção às premissas do projeto'
+        : isViable ? 'Retorno projetado acima da taxa de desconto'
+        : result.profit <= 0 ? 'A operação não cobre os custos informados'
+        : 'Retorno abaixo da taxa de desconto no horizonte analisado';
+      const breakEven = result.breakEvenCars === null ? 'A receita por recarga não cobre os custos variáveis.'
+        : `Equilíbrio operacional: ${number(result.breakEvenCars, 1)} carros/dia.`;
+      $('insight-description').textContent = warnings.length ? warnings.join(' ')
+        : `${breakEven} Energia vendida: ${number(result.kwh)} kWh/mês. ${result.payback === null ? 'Investimento não recuperado no período.' : `Payback simples: ${number(result.payback, 1)} anos.`}`;
+    }
+    function update(save = true) {
+      const { data, errors } = readData();
+      valid = errors.length === 0;
+      document.querySelectorAll('[data-report], [data-action]').forEach(button => { button.disabled = !valid; });
+      if (!valid) {
+        document.querySelectorAll('.metric-value').forEach(element => { element.textContent = '—'; });
+        $('cash-chart').innerHTML = '<desc id="chart-description">Preencha os campos corretamente para visualizar o gráfico.</desc>';
+        $('cash-chart').setAttribute('hidden', '');
+        $('chart-empty').hidden = false;
+        $('insurance').value = validNumber($('investment'), data.investment) ? number(data.investment * .01, 2, 0) : '—';
+        $('insight').classList.add('warning');
+        $('insight-title').textContent = 'Confira os campos destacados';
+        const first = errors[0];
+        const label = first.labels[0].textContent.replace(/\?/g, '').trim().replace(/\s+/g, ' ');
+        $('insight-description').textContent = `${label}: informe ${first.dataset.digits === '0' ? 'um número inteiro' : 'um número'} entre ${number(Number(first.dataset.min), 2, 0)} e ${number(Number(first.dataset.max), 2, 0)}. Use vírgula para decimais.`;
+        $('save-status').textContent = 'Campos pendentes de correção';
+        return;
+      }
+      currentData = data;
+      currentResult = calculate(data);
+      const result = currentResult;
+      $('insurance').value = number(data.investment * .01, 2, 0);
+      setMetric('monthly-revenue', money(result.revenue));
+      setMetric('monthly-cost', money(result.totalCost));
+      setMetric('monthly-profit', money(result.profit), result.profit);
+      setMetric('margin', percent(result.margin));
+      setMetric('annual-revenue', money(result.annualRevenue));
+      setMetric('annual-cost', money(result.annualCost));
+      setMetric('annual-profit', money(result.annualProfit), result.annualProfit);
+      setMetric('first-year', money(result.firstYear));
+      setMetric('irr', result.irr === null ? '—' : `${percent(result.irr * 100, 1)} a.a.`);
+      setMetric('npv', money(result.npv), result.npv);
+      setMetric('payback', result.payback === null ? `> ${data.years} anos` : `${number(result.payback, 1)} anos`);
+      $('payback').title = result.payback === null ? 'O investimento não é recuperado no horizonte analisado.' : 'Payback simples, sem desconto, com interpolação anual.';
+      setMetric('roi', percent(result.roi, 0));
+      $('npv-label').textContent = `VPL @ ${percent(data.discount, 2)}`;
+      $('roi-label').textContent = `ROI ${data.years} ${data.years === 1 ? 'ano' : 'anos'}`;
+      renderChart(data, result);
+      renderInsight(data, result);
+      if (save) saveData();
+    }
+
+    const REPORT_TITLES = { study: 'Estudo de Viabilidade', simulator: 'Simulador de Eletroposto', basic: 'Orçamento básico', complete: 'Orçamento completo' };
+    const COST_LABELS = { electricity: 'Energia elétrica', gateway: 'Gateway', rent: 'Arrendamento do ponto', maintenance: 'Manutenção', subscription: 'Assinatura mensal', insurance: 'Seguro (provisão mensal)', tax: 'Imposto — Simples Nacional', otherFixed: 'Outros custos fixos' };
+    function reportTable(headers, rows) {
+      return `<div class="table-scroll"><table><thead><tr>${headers.map(header => `<th scope="col">${escapeHTML(header)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHTML(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    }
+    function financialTable(data) {
+      return reportTable(['Premissa financeira', 'Valor'], [
+        ['Ocupação inicial', percent(data.initialOccupancy, 1)], ['Rampa até o regime pleno', `${data.rampMonths} meses`],
+        ['Taxa de desconto anual', percent(data.discount)], ['Horizonte de análise', `${data.years} anos`],
+        ['Seguro anual estimado (1% do investimento)', money(data.investment * .01, 2)]
+      ]);
+    }
+    function operatingTable(data) {
+      return reportTable(['Premissa operacional', 'Valor'], [
+        ['Potência de cada carregador', `${number(data.power, 1, 0)} kW`], ['Carregadores / bicos totais', `${data.chargers} / ${data.connectors}`],
+        ['Carros por dia (total do eletroposto)', number(data.cars)], ['Carga média por carro', `${number(data.energy, 1, 0)} kWh`],
+        ['Dias de operação por mês', number(data.days)], ['Custo efetivo do kWh', money(data.energyCost, 2)],
+        ['Preço de revenda do kWh', money(data.salePrice, 2)], ['Ativação por sessão', money(data.activation, 2)],
+        ['Gateway sobre faturamento', percent(data.gateway)], ['Arrendamento sobre faturamento', percent(data.rent)],
+        ['Manutenção sobre faturamento', percent(data.maintenance)], ['Imposto efetivo sobre faturamento', percent(data.tax)],
+        ['Assinatura mensal', money(data.subscription, 2)], ['Outros custos fixos por mês', money(data.otherFixed, 2)]
+      ]);
+    }
+    function resultsReport(data, result) {
+      const kpis = [
+        ['Faturamento mensal', money(result.revenue)], ['Custos + impostos/mês', money(result.totalCost)],
+        ['Lucro mensal', money(result.profit)], ['Margem operacional', percent(result.margin)],
+        ['TIR anual', result.irr === null ? 'Não calculável' : `${percent(result.irr * 100, 1)} a.a.`],
+        [`VPL @ ${percent(data.discount)}`, money(result.npv)],
+        ['Payback simples', result.payback === null ? `> ${data.years} anos` : `${number(result.payback, 1)} anos`],
+        [`ROI em ${data.years} anos`, percent(result.roi, 0)]
+      ];
+      return `<div class="paper-grid">${kpis.map(([label, value]) => `<div class="paper-kpi"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>`).join('')}</div>`
+        + reportTable(['Resultado anual', 'Valor'], [['Faturamento em regime pleno', money(result.annualRevenue, 2)], ['Custos + impostos em regime pleno', money(result.annualCost, 2)], ['Lucro em regime pleno', money(result.annualProfit, 2)], ['Lucro do primeiro ano (rampa)', money(result.firstYear, 2)]]);
+    }
+    function buildReport(type, data, result) {
+      const now = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+      let html = `<article class="paper"><header class="paper-header"><div><div class="paper-brand">PW ENERGY</div><div class="muted">Planejamento de infraestrutura de recarga</div></div><div class="muted">Emitido em ${escapeHTML(now)}<br>Simulação estimativa · uso consultivo</div></header>`;
+      html += `<h1>${REPORT_TITLES[type]}</h1><p><strong>Preparado para:</strong> ${escapeHTML(data.client || 'Não informado')}<br><strong>Cidade / local:</strong> ${escapeHTML(data.city || 'Não informado')}<br><strong>Vendedor:</strong> ${escapeHTML(data.seller || 'Não informado')} · ${escapeHTML(data.contact || 'Contato não informado')}</p>`;
+      const isBudget = type === 'basic' || type === 'complete';
+      if (isBudget) {
+        html += `<h2>Estimativa de implantação</h2>` + reportTable(['Descrição', 'Quantidade / valor'], [
+          [`Carregador ${data.power <= 22 ? 'AC' : 'DC'} ${number(data.power, 1, 0)} kW`, `${data.chargers} unidade(s)`],
+          ['Bicos de carregamento (total do eletroposto)', `${data.connectors}`],
+          ['Investimento total informado', money(data.investment, 2)]
+        ]);
+        html += '<div class="paper-callout"><strong>Orçamento preliminar, sujeito a vistoria e proposta comercial.</strong><br>O investimento é o valor global informado no simulador. Não há preços unitários cadastrados; equipamentos, obras e serviços não foram cotados separadamente.</div>';
+        html += '<h2>Escopo a confirmar</h2><p>Fornecimento dos carregadores, projeto elétrico, adequação da rede, proteções, cabeamento, obras civis, instalação, comissionamento e conexão com a plataforma de gestão. Confirmar com o fornecedor quais itens estão incluídos no valor informado.</p>';
+        html += '<p>Frete, prazo, condições de pagamento, garantia, validade comercial, eventuais obras da concessionária e demanda contratada: <strong>a definir na proposta final</strong>.</p>';
+      }
+      if (type !== 'basic') {
+        html += '<h2>Resultados da operação e retorno</h2>' + resultsReport(data, result);
+        if (!isBudget) {
+          html += `<div class="paper-callout"><strong>${result.npv > 0 ? 'VPL positivo nas premissas informadas.' : 'VPL não positivo nas premissas informadas.'}</strong> `;
+          html += result.breakEvenCars === null ? 'A receita por recarga não cobre os custos variáveis.' : `Ponto de equilíbrio operacional: ${number(result.breakEvenCars, 2)} carros/dia.`;
+          html += ' Resultados não representam garantia de rentabilidade.</div>';
+        }
+        if (result.capacityUse > 100) html += '<div class="paper-callout"><strong>Atenção:</strong> o volume de energia supera a capacidade teórica de 24 horas dos equipamentos. Revise o dimensionamento antes de usar esta projeção.</div>';
+        if (data.connectors < data.chargers) html += '<div class="paper-callout"><strong>Atenção:</strong> há menos bicos que carregadores. Confira a configuração física.</div>';
+        html += '<h2>Premissas operacionais</h2>' + operatingTable(data);
+        html += '<h2>Modelagem financeira</h2>' + financialTable(data);
+        html += '<h2>Composição dos custos — mês em regime pleno</h2>' + reportTable(['Custo', 'Valor mensal'], [
+          ...Object.entries(result.costs).map(([key, value]) => [COST_LABELS[key], money(value, 2)]), ['Total', money(result.totalCost, 2)]
+        ]);
+        html += `<h2>Fluxo de caixa anual — ${data.years} anos</h2>` + reportTable(['Ano', 'Faturamento', 'Custos + impostos', 'Lucro / fluxo', 'Saldo acumulado'], [
+          ['0 — implantação', '—', '—', money(-data.investment), money(-data.investment)],
+          ...result.annual.map(row => [String(row.year), money(row.revenue), money(row.costs), money(row.cash), money(row.cumulative)])
+        ]);
+      }
+      html += '<h2>Metodologia e limites</h2><p class="muted">Receita mensal = carros/dia × dias/mês × (kWh por carro × preço de revenda + taxa de ativação). Energia e taxas percentuais variam com a ocupação; assinatura, outros custos fixos e seguro permanecem integrais. Seguro estimado em 1% do investimento por ano. A rampa evolui linearmente da ocupação inicial até 100% no último mês; com um mês de rampa, somente o primeiro mês usa a ocupação inicial; zero meses desativa a rampa. Anos de 12 meses equivalentes.</p>';
+      html += '<p class="muted">TIR e VPL usam fluxos no fim de cada ano, com investimento no instante zero. Payback simples por interpolação anual. ROI = (lucros acumulados − investimento) ÷ investimento. Sem CAPEX, TIR e ROI são indefinidos. Valores constantes após a rampa, sem inflação, depreciação, financiamento, reposição, valor residual ou perdas elétricas separadas. A potência nominal representa capacidade teórica; a carga real depende do veículo e do compartilhamento entre bicos. Tributos e tarifas devem ser validados com profissionais responsáveis.</p>';
+      html += '<p class="muted">Documento gerado localmente pelo simulador PW Energy. Valores exibidos arredondados; cálculos realizados com precisão integral.</p></article>';
+      return html;
+    }
+    function openReport(type) {
+      if (!valid || !REPORT_TITLES[type]) return;
+      reportHTML = buildReport(type, currentData, currentResult);
+      $('dialog-title').textContent = REPORT_TITLES[type];
+      $('dialog-content').innerHTML = reportHTML;
+      $('print-button').hidden = false;
+      $('document-dialog').showModal();
+      $('document-dialog').scrollTop = 0;
+    }
+    function printReport() {
+      if (!reportHTML) return;
+      $('print-area').innerHTML = reportHTML;
+      window.print();
+    }
+
+    function renderComparison() {
+      const scenarios = [{ name: 'Cenário atual', data: currentData }, ...savedScenarios];
+      const entries = scenarios.map(scenario => ({ ...scenario, result: calculate(scenario.data) }));
+      const rows = [
+        ['Carros por dia', entry => number(entry.data.cars)],
+        ['Preço de revenda / kWh', entry => money(entry.data.salePrice, 2)],
+        ['Investimento total', entry => money(entry.data.investment)],
+        ['Horizonte', entry => `${entry.data.years} anos`],
+        ['Taxa de desconto', entry => percent(entry.data.discount)],
+        ['Faturamento / mês', entry => money(entry.result.revenue)],
+        ['Custos + impostos / mês', entry => money(entry.result.totalCost)],
+        ['Lucro / mês', entry => money(entry.result.profit)],
+        ['Margem', entry => percent(entry.result.margin)],
+        ['Lucro anual pleno', entry => money(entry.result.annualProfit)],
+        ['Lucro ano 1 (rampa)', entry => money(entry.result.firstYear)],
+        ['TIR anual', entry => entry.result.irr === null ? '—' : percent(entry.result.irr * 100, 1)],
+        ['VPL', entry => money(entry.result.npv)],
+        ['Payback simples', entry => entry.result.payback === null ? `> ${entry.data.years} anos` : `${number(entry.result.payback, 1)} anos`],
+        ['ROI no horizonte', entry => percent(entry.result.roi, 0)]
+      ];
+      let html = '<div class="comparison-toolbar"><p>Salve até 3 cenários, feche esta janela e altere os campos para comparar com o cenário atual. Compare prazos e taxas equivalentes.</p>';
+      html += `<button type="button" data-compare="save" ${savedScenarios.length >= 3 ? 'disabled' : ''}>+ Salvar cenário atual</button></div>`;
+      html += '<div class="table-scroll"><table class="comparison-table"><thead><tr><th scope="col">Indicador</th>';
+      html += entries.map(entry => `<th scope="col">${escapeHTML(entry.name)}</th>`).join('') + '</tr></thead><tbody>';
+      html += rows.map(([label, getter]) => `<tr><th scope="row">${escapeHTML(label)}</th>${entries.map(entry => `<td>${escapeHTML(getter(entry))}</td>`).join('')}</tr>`).join('');
+      html += '<tr><td>Ações</td><td>Em edição</td>' + savedScenarios.map((scenario, index) => `<td><button type="button" data-compare="load" data-index="${index}">Carregar</button><button type="button" data-compare="remove" data-index="${index}">Excluir</button></td>`).join('') + '</tr></tbody></table></div>';
+      if (!savedScenarios.length) html += '<p class="note">Nenhum cenário salvo. Salve a simulação de 10 carros/dia e depois altere para 6 carros/dia para reproduzir a comparação das referências.</p>';
+      $('dialog-content').innerHTML = html;
+    }
+    function openComparison() {
+      if (!valid) return;
+      reportHTML = '';
+      $('dialog-title').textContent = 'Comparar cenários';
+      $('print-button').hidden = true;
+      renderComparison();
+      $('document-dialog').showModal();
+      $('document-dialog').scrollTop = 0;
+    }
+    function togglePresentation(enabled) {
+      document.body.classList.toggle('presenting', enabled);
+      if (enabled) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        $('exit-presentation').focus();
+      } else document.querySelector('[data-action="presentation"]').focus();
+    }
+
+    form.addEventListener('submit', event => event.preventDefault());
+    form.addEventListener('input', () => update());
+    form.addEventListener('change', () => update());
+    form.addEventListener('focusout', event => {
+      const input = event.target;
+      if (!input.matches('[data-number]')) return;
+      const value = parseNumber(input.value);
+      if (validNumber(input, value)) { formatInput(input, value); update(); }
+    });
+    $('reset-button').addEventListener('click', () => {
+      if (!window.confirm('Restaurar os valores padrão da simulação? Os cenários salvos serão mantidos.')) return;
+      applyData(DEFAULTS);
+      update();
+      toast('Valores padrão restaurados.');
+    });
+    document.querySelectorAll('[data-report]').forEach(button => button.addEventListener('click', () => openReport(button.dataset.report)));
+    document.querySelector('[data-action="compare"]').addEventListener('click', openComparison);
+    document.querySelector('[data-action="presentation"]').addEventListener('click', () => togglePresentation(true));
+    $('exit-presentation').addEventListener('click', () => togglePresentation(false));
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        $('tooltip').hidden = true;
+        if (document.body.classList.contains('presenting')) togglePresentation(false);
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') {
+        if (!$('document-dialog').open && valid) {
+          event.preventDefault();
+          openReport('simulator');
+        } else if ($('document-dialog').open && reportHTML) {
+          $('print-area').innerHTML = reportHTML;
+        }
+      }
+    });
+    window.addEventListener('beforeprint', () => {
+      $('print-area').innerHTML = reportHTML || (valid ? buildReport('simulator', currentData, currentResult) : '<article class="paper"><h1>Simulação incompleta</h1><p>Corrija os campos destacados antes de gerar o relatório.</p></article>');
+    });
+    $('print-button').addEventListener('click', printReport);
+    $('close-dialog').addEventListener('click', () => $('document-dialog').close());
+    $('document-dialog').addEventListener('close', () => { reportHTML = ''; });
+    $('document-dialog').addEventListener('click', event => {
+      if (event.target !== $('document-dialog')) return;
+      const rect = $('document-dialog').getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) $('document-dialog').close();
+    });
+    $('dialog-content').addEventListener('click', event => {
+      const button = event.target.closest('[data-compare]');
+      if (!button) return;
+      const action = button.dataset.compare;
+      const index = Number(button.dataset.index);
+      if (action === 'save' && savedScenarios.length < 3) {
+        const name = currentData.client || `${currentData.cars} carros/dia`;
+        savedScenarios.push({ name: `${name} · ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, data: { ...currentData } });
+        const saved = persistScenarios();
+        renderComparison();
+        toast(saved ? 'Cenário salvo neste navegador.' : 'Cenário salvo somente nesta sessão; armazenamento indisponível.');
+      } else if (action === 'remove' && Number.isInteger(index) && savedScenarios[index]) {
+        savedScenarios.splice(index, 1);
+        const saved = persistScenarios();
+        renderComparison();
+        if (!saved) toast('Removido desta sessão; não foi possível atualizar o armazenamento.');
+      } else if (action === 'load' && Number.isInteger(index) && savedScenarios[index]) {
+        if (!window.confirm('Carregar este cenário e substituir os parâmetros atuais?')) return;
+        applyData(savedScenarios[index].data);
+        update();
+        $('document-dialog').close();
+        toast('Cenário carregado.');
+      }
+    });
+
+    // Ajuda acessível por mouse, toque e teclado, sem recorte nas bordas da tela.
+    for (const help of document.querySelectorAll('.help')) {
+      help.setAttribute('tabindex', '0');
+      help.setAttribute('role', 'button');
+      help.setAttribute('aria-label', help.dataset.tip);
+      const show = () => {
+        const tooltip = $('tooltip');
+        tooltip.textContent = help.dataset.tip;
+        tooltip.hidden = false;
+        const rect = help.getBoundingClientRect();
+        tooltip.style.left = `${Math.max(12, Math.min(rect.left - 100, window.innerWidth - tooltip.offsetWidth - 12))}px`;
+        const below = rect.bottom + 9;
+        tooltip.style.top = `${below + tooltip.offsetHeight < window.innerHeight - 10 ? below : Math.max(10, rect.top - tooltip.offsetHeight - 9)}px`;
+      };
+      const hide = () => { $('tooltip').hidden = true; };
+      help.addEventListener('mouseenter', show);
+      help.addEventListener('mouseleave', hide);
+      help.addEventListener('focus', show);
+      help.addEventListener('blur', hide);
+      help.addEventListener('click', event => { event.preventDefault(); show(); });
+      help.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); show(); } });
+    }
+    window.addEventListener('scroll', () => { $('tooltip').hidden = true; }, { passive: true });
+    let chartResizeFrame;
+    function resizeChart() {
+      cancelAnimationFrame(chartResizeFrame);
+      chartResizeFrame = requestAnimationFrame(() => {
+        if (valid && currentResult) renderChart(currentData, currentResult);
+      });
+    }
+    window.addEventListener('resize', () => { $('tooltip').hidden = true; resizeChart(); });
+    if ('ResizeObserver' in window) {
+      let previousWidth = 0;
+      const chartObserver = new ResizeObserver(entries => {
+        const width = entries[0].contentRect.width;
+        if (Math.abs(width - previousWidth) > 1) { previousWidth = width; resizeChart(); }
+      });
+      chartObserver.observe($('cash-chart').parentElement);
+    }
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) currentData = sanitizeData(JSON.parse(stored));
+    } catch { storageAvailable = false; }
+    try {
+      const stored = JSON.parse(localStorage.getItem(SCENARIOS_KEY) || '[]');
+      if (Array.isArray(stored)) savedScenarios = stored.slice(0, 3).filter(item => item && typeof item.name === 'string' && item.data).map(item => ({ name: item.name.slice(0, 140), data: sanitizeData(item.data) }));
+    } catch { savedScenarios = []; }
+    applyData(currentData);
+    update(false);
+    if (!storageAvailable) $('save-status').textContent = 'Dados apenas nesta sessão';
+    }
+
+    document.getElementById('access-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const password = document.getElementById('access-password');
+      const error = document.getElementById('access-error');
+      if (password.value !== 'pablowill2026') {
+        error.textContent = 'Senha incorreta. Tente novamente.';
+        password.setAttribute('aria-invalid', 'true');
+        password.focus();
+        password.select();
+        return;
+      }
+      password.value = '';
+      password.removeAttribute('aria-invalid');
+      error.textContent = '';
+      document.body.classList.remove('locked');
+      document.getElementById('access-screen').remove();
+      initializeSimulator();
+      window.scrollTo(0, 0);
+      document.getElementById('reset-button').focus({ preventScroll: true });
+    });
+  </script>
+</body>
+</html>
