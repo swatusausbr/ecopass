@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gerador de Onda — Teste de Áudio</title>
+<style>
+:root{font:16px system-ui,-apple-system,sans-serif;color-scheme:dark;background:#0b1424;color:#eff6ff}
+*{box-sizing:border-box}body{margin:0;padding:25px 16px 60px}.wrap{max-width:630px;margin:auto}h1{font-size:clamp(26px,5vw,34px);line-height:1.15;margin:5px 0 10px}p{line-height:1.52;color:#bdd0e7}.meta{font-size:13px;font-weight:650;color:#9ec5ff;letter-spacing:.04em}.panel{background:#162640;border:1px solid #334c70;border-radius:17px;padding:19px;margin-top:18px}label{display:block;font-weight:650;margin-bottom:9px}.control{display:flex;align-items:center;gap:10px;flex-wrap:wrap}input[type=number]{font:600 24px system-ui;color:white;background:#0b1424;border:1px solid #536e92;border-radius:10px;padding:10px;width:170px}input[type=range]{width:100%;accent-color:#80b5ff}input[type=checkbox]{width:22px;height:22px;accent-color:#80b5ff}.steppers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:15px 0}.steppers button{font-size:13px;padding:10px 0}button{font:600 16px system-ui;cursor:pointer;border:1px solid #4d6990;background:#203c60;color:white;border-radius:10px;padding:12px}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}.start{background:#327ce6;border:0}.start.stop{background:#b64c5a}.test{background:#294566}.status{margin-top:15px;background:#0d1c31;border-radius:10px;padding:13px;font-size:14px;line-height:1.5;color:#d0def1;min-height:66px}.pill{display:inline-block;border-radius:20px;font-size:12px;padding:4px 8px;background:#264568;color:#bcdcff}.small{font-size:13px;color:#acbfd5}.check{display:flex;gap:10px;align-items:center;margin:20px 0 10px}.check label{margin:0}.volumehead{display:flex;justify-content:space-between;gap:10px}.warning{padding:14px 16px;background:#302b2b;border-left:3px solid #e3ab5c;border-radius:7px;font-size:14px;color:#e4ddcd;margin-top:18px;line-height:1.5}canvas{width:100%;height:110px;background:#0e1b30;border-radius:9px}.hint{font-size:13px;color:#adc1da;margin-top:10px}strong{color:#fff}@media(max-width:440px){.buttons{grid-template-columns:1fr}.steppers button{font-size:12px}}
+</style>
+</head>
+<body><main class="wrap">
+<div class="meta">VERSÃO 2 · TESTE DE SOM INTEGRADO</div>
+<h1>Gerador de onda invertida</h1>
+<p>Para verificar a reprodução, toque em <strong>Testar 440 Hz</strong> antes de selecionar frequências agudas.</p>
+<section class="panel">
+<label for="freq">Frequência do sinal</label>
+<div class="control"><input id="freq" type="number" min="100" max="16000" step="0.1" value="440.0" inputmode="decimal"><span>Hz</span><span id="phaseLabel" class="pill">Fase 0°</span></div>
+<div class="steppers">
+<button type="button" data-step="-10">−10</button><button type="button" data-step="-1">−1</button><button type="button" data-step="-0.1">−0,1</button><button type="button" data-step="0.1">+0,1</button>
+<button type="button" data-step="1">+1</button><button type="button" data-step="10">+10</button><button type="button" data-step="100">+100</button><button type="button" data-step="1000">+1000</button>
+</div>
+<input id="freqSlider" type="range" min="100" max="16000" step="1" value="440" aria-label="Ajustar frequência">
+<div class="check"><input id="invert" type="checkbox"><label for="invert">Inverter a polaridade (180°)</label></div>
+<div class="volumehead"><label for="volume">Amplitude digital</label><span id="volLabel">0,5%</span></div>
+<input id="volume" type="range" min="0" max="20" value="5" step="1" aria-label="Amplitude digital 0 a 2 por cento">
+<p class="small">O controle varia de 0 a 2% da amplitude digital máxima. <strong>Mantenha também o volume físico do dispositivo baixo.</strong></p>
+<div class="buttons"><button type="button" id="test" class="test">♫ Testar 440 Hz</button><button type="button" id="toggle" class="start">▶ Iniciar som</button></div>
+<div id="status" class="status" role="status">Aguardando seu toque. Se este botão não mudar de texto, o visualizador provavelmente bloqueia scripts.</div>
+</section>
+<section class="panel"><label>Visualização matemática</label><canvas id="wave" width="620" height="110"></canvas><div id="formula" class="hint">sen(2π × 440,0 × t)</div></section>
+<div class="warning"><strong>Sobre o zumbido:</strong> esta ferramenta gera sinais acústicos, mas não conhece a fase do zumbido interno e, portanto, não pode garantir cancelamento. Um tom isolado pode soar idêntico mesmo com inversão de 180°. Não aumente o volume para tentar fazer a onda “funcionar”. Pare se causar incômodo ou piora do zumbido.</div>
+<p class="hint">Se estiver no iPhone, abra a página no <strong>Safari</strong> a partir de um endereço web. Pré-visualizadores de HTML no ChatGPT ou em Arquivos podem bloquear JavaScript e áudio. Se aparecer “Contexto suspenso”, tente abrir no Safari. No modo silencioso do aparelho, a saída de áudio pode variar.</p>
+</main>
+<script>
+(function(){'use strict';
+const $=id=>document.getElementById(id);
+const freq=$('freq'),freqSlider=$('freqSlider'),vol=$('volume'),inv=$('invert'),toggle=$('toggle'),test=$('test'),status=$('status');
+let ctx=null,osc=null,phase=null,master=null,playing=false;
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const hz=()=>clamp(Number(freq.value)||440,100,16000);
+const amp=()=>Number(vol.value)/1000;
+function display(){
+  $('volLabel').textContent=(amp()*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+  $('phaseLabel').textContent=inv.checked?'Fase 180°':'Fase 0°';
+  $('formula').textContent=(inv.checked?'−':'')+'sen(2π × '+hz().toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' × t)';
+  const canvas=$('wave');if(!canvas||!canvas.getContext)return;const p=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  p.clearRect(0,0,w,h);p.beginPath();p.strokeStyle='#44607e';p.lineWidth=1;p.moveTo(0,h/2);p.lineTo(w,h/2);p.stroke();
+  p.beginPath();p.strokeStyle=inv.checked?'#eea46e':'#82c6ff';p.lineWidth=2.4;
+  for(let x=0;x<w;x++){let y=h/2-(inv.checked?-1:1)*32*Math.sin(x/w*Math.PI*6);if(x===0)p.moveTo(x,y);else p.lineTo(x,y)}p.stroke();
+}
+function update(){if(!playing||!ctx)return;const t=ctx.currentTime;osc.frequency.setTargetAtTime(hz(),t,0.01);phase.gain.setTargetAtTime(inv.checked?-1:1,t,0.006);master.gain.setTargetAtTime(amp(),t,0.02)}
+function setFreq(v){const n=clamp(Math.round((Number(v)||440)*10)/10,100,16000);freq.value=n.toFixed(1);freqSlider.value=String(n);update();display()}
+function drawStopped(message){playing=false;toggle.textContent='▶ Iniciar som';toggle.classList.remove('stop');test.disabled=false;status.textContent=message||'Áudio interrompido.'}
+async function start(){
+ try{
+  status.textContent='Solicitando áudio ao navegador…';
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass)throw Error('Web Audio não está disponível neste visualizador.');
+  ctx=new AudioContextClass();
+  osc=ctx.createOscillator();phase=ctx.createGain();master=ctx.createGain();
+  osc.type='sine';osc.frequency.value=hz();phase.gain.value=inv.checked?-1:1;master.gain.value=0;
+  osc.connect(phase);phase.connect(master);master.connect(ctx.destination);
+  osc.start();
+  // Executado como resposta direta ao toque, necessário para iOS.
+  const resumePromise=ctx.resume();
+  await Promise.race([resumePromise,new Promise((_,rej)=>setTimeout(()=>rej(Error('O navegador não autorizou a reprodução. Abra no Safari, não no visualizador de arquivos.')),2500))]);
+  if(ctx.state!=='running')throw Error('Contexto de áudio '+ctx.state+'. Abra esta página no Safari.');
+  playing=true;
+  master.gain.setTargetAtTime(amp(),ctx.currentTime,0.04);
+  toggle.textContent='■ Parar som';toggle.classList.add('stop');test.disabled=false;
+  status.textContent='Áudio ativo · '+hz().toLocaleString('pt-BR')+' Hz · amplitude '+(amp()*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'% · fase '+(inv.checked?'180°':'0°')+'. Se não ouvir 440 Hz, confira o volume de mídia e a saída de áudio.';
+ }catch(err){
+  if(ctx){try{await ctx.close()}catch(e){}}
+  ctx=null;osc=null;phase=null;master=null;drawStopped('Não foi possível tocar: '+err.message);
+ }
+}
+async function stop(){const oldCtx=ctx,oldOsc=osc,oldMaster=master;ctx=null;osc=null;phase=null;master=null;drawStopped();if(!oldCtx)return;try{oldMaster.gain.setTargetAtTime(0,oldCtx.currentTime,0.008);oldOsc.stop(oldCtx.currentTime+0.07);setTimeout(()=>oldCtx.close().catch(()=>{}),120)}catch(e){try{await oldCtx.close()}catch(x){}}}
+toggle.addEventListener('click',()=>{if(playing)stop();else start()});
+test.addEventListener('click',()=>{setFreq(440);if(amp()===0){vol.value='5';display();update()}if(!playing)start();else{update();status.textContent='Tom de teste ativo em 440 Hz. Se não escutar, confira o volume de mídia ou abra o arquivo em uma página Safari hospedada.'}});
+freq.addEventListener('change',()=>setFreq(freq.value));freq.addEventListener('input',()=>{const n=Number(freq.value);if(Number.isFinite(n)&&n>=100&&n<=16000){freqSlider.value=String(n);update();display()}});
+freqSlider.addEventListener('input',()=>setFreq(freqSlider.value));document.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>setFreq(hz()+Number(b.dataset.step))));
+vol.addEventListener('input',()=>{update();display()});inv.addEventListener('change',()=>{update();display()});
+window.addEventListener('pagehide',()=>{if(playing)stop()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing)stop()});display();
+})();
+</script>
+</body></html>
